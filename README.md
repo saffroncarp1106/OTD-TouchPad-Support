@@ -1,5 +1,7 @@
 # OTD-TouchPad-Support
 The goal of the app was to add touchpad support with OTD, to allow for absolute mode and custom sizes. The default windows cursor settings were minimal and.. eh. I have verified it works with the Asus g15, Microsoft Surface, and an old Dell latitude.
+
+
 <img width="812" height="226" alt="image" src="https://github.com/user-attachments/assets/1f165429-8183-4cac-b0ed-34966700e9d5" />
 
 
