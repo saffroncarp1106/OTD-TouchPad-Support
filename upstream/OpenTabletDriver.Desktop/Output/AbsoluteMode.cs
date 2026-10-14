@@ -22,6 +22,37 @@ namespace OpenTabletDriver.Desktop.Output
             base.OnOutput(report);
         }
 
+        private string linuxIdentity;
+
+        public override OpenTabletDriver.Plugin.Tablet.TabletReference Tablet
+        {
+            get => base.Tablet;
+            set
+            {
+                if (linuxIdentity != null)
+                    OpenTabletDriver.Devices.LinuxTouchpad.LinuxTouchpadControl.Release(linuxIdentity);
+                linuxIdentity = null;
+                base.Tablet = value;
+                if (System.OperatingSystem.IsLinux() &&
+                    value?.Properties.Attributes?.TryGetValue("LinuxTouchpadIdentity", out var identity) == true &&
+                    Pointer is OpenTabletDriver.Desktop.Interop.Input.Absolute.EvdevAbsolutePointer pointer && pointer.CanWrite)
+                {
+                    linuxIdentity = identity;
+                    OpenTabletDriver.Devices.LinuxTouchpad.LinuxTouchpadControl.Acquire(identity);
+                }
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (linuxIdentity != null)
+            {
+                OpenTabletDriver.Devices.LinuxTouchpad.LinuxTouchpadControl.Release(linuxIdentity);
+                linuxIdentity = null;
+            }
+            base.Dispose(disposing);
+        }
+
         [Resolved]
         public override IAbsolutePointer Pointer { set; get; }
     }

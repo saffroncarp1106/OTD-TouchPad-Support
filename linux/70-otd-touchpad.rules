@@ -1,0 +1,4 @@
+# Grant the active local desktop user access to touchpads and OTD output.
+# Run before 73-seat-late.rules so logind applies seat ACLs.
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_TOUCHPAD}=="1", TAG+="uaccess"
+SUBSYSTEM=="misc", KERNEL=="uinput", TAG+="uaccess"

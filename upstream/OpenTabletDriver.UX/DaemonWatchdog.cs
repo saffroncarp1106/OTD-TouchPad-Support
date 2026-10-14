@@ -20,6 +20,11 @@ namespace OpenTabletDriver.UX
                 WorkingDirectory = AppContext.BaseDirectory,
                 CreateNoWindow = true
             },
+            PluginPlatform.Linux => new ProcessStartInfo
+            {
+                FileName = Path.Join(AppContext.BaseDirectory, "OpenTabletDriver.Daemon"),
+                WorkingDirectory = AppContext.BaseDirectory
+            },
             PluginPlatform.MacOS => new ProcessStartInfo
             {
                 FileName = Path.Join(AppContext.BaseDirectory, "OpenTabletDriver.Daemon")
@@ -34,7 +39,7 @@ namespace OpenTabletDriver.UX
 
         public void Start()
         {
-            if (SystemInterop.CurrentPlatform == PluginPlatform.Windows || SystemInterop.CurrentPlatform == PluginPlatform.MacOS)
+            if (SystemInterop.CurrentPlatform == PluginPlatform.Windows || SystemInterop.CurrentPlatform == PluginPlatform.MacOS || SystemInterop.CurrentPlatform == PluginPlatform.Linux)
                 startInfo.Environment["ASUS_OTD_UI_PARENT"] = Environment.ProcessId.ToString();
             this.daemonProcess = new Process()
             {

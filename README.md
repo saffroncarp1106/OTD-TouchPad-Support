@@ -33,3 +33,10 @@ There are quirks, it only supports 1 finger input at a time, it will just and sk
 
 # MacOS
 Todo
+
+
+# Linux v0.0.1 — experimental prerelease
+
+Native Linux touchpad support is available in the [Linux v0.0.1 prerelease](https://github.com/saffroncarp1106/OTD-TouchPad-Support/releases/tag/linux-v0.0.1). Download the self-contained x64 build there. See [Linux setup and supported devices](linux/README.md) and [validation notes](linux/VALIDATION.md).
+
+This version uses kernel absolute touchpad data with OTD Absolute Mode. It supports type B multitouch and single-touch absolute touchpads; support for every model, Wayland desktop, or Apple Silicon is not yet verified.

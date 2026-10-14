@@ -72,7 +72,7 @@ namespace OpenTabletDriver.Desktop.Profiles
             return new Profile
             {
                 Tablet = tablet.Properties.Name,
-                OutputMode = new PluginSettingStore(DefaultOutputModeType),
+                OutputMode = new PluginSettingStore(tablet.Properties.Attributes?.ContainsKey("LinuxTouchpadIdentity") == true ? typeof(AbsoluteMode) : DefaultOutputModeType),
                 AbsoluteModeSettings = AbsoluteModeSettings.GetDefaults(tablet.Properties.Specifications.Digitizer),
                 RelativeModeSettings = RelativeModeSettings.GetDefaults(),
                 BindingSettings = BindingSettings.GetDefaults(tablet.Properties.Specifications)

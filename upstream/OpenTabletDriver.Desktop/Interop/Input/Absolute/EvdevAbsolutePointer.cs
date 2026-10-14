@@ -60,6 +60,8 @@ namespace OpenTabletDriver.Desktop.Interop.Input.Absolute
             }
         }
 
+        public bool CanWrite => Device.CanWrite;
+
         public void SetPosition(Vector2 pos)
         {
             Device.Write(EventType.EV_ABS, EventCode.ABS_X, (int)pos.X);
