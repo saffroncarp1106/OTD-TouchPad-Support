@@ -30,3 +30,6 @@ There are quirks, it only supports 1 finger input at a time, it will just and sk
 <img width="1472" height="743" alt="image" src="https://github.com/user-attachments/assets/98320a58-e440-4653-8668-9980349434da" />
 
 <img width="1713" height="223" alt="image" src="https://github.com/user-attachments/assets/a9b14143-2d26-4dfb-a386-02735e4f51d7" />
+
+# MacOS
+Todo
