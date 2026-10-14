@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/.dotnet/
+**/.packages/
+**/.build-home/
+**/.local/
+**/__pycache__/
+**/results/
+**/build/
+release/
+*.user
+.DS_Store

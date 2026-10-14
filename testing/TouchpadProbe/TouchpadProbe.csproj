@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><AssemblyName>Touchpad-Probe</AssemblyName></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../upstream/OpenTabletDriver/Devices/AsusTouchpad/TouchpadNative.cs" Link="TouchpadNative.cs" />
+    <Compile Include="../../upstream/OpenTabletDriver/Devices/AsusTouchpad/GenericTouchpad.cs" Link="GenericTouchpad.cs" />
+    <Compile Include="../../upstream/OpenTabletDriver/Devices/AsusTouchpad/TouchpadProfile.cs" Link="TouchpadProfile.cs" />
+  </ItemGroup>
+</Project>
