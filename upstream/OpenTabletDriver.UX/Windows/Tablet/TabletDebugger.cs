@@ -229,7 +229,10 @@ namespace OpenTabletDriver.UX.Windows.Tablet
 
         private void SetupBindings()
         {
-            _deviceName.TextBinding.BindDataContext((TDVM vm) => vm.DeviceName, DualBindingMode.OneWay);
+            _deviceName.TextBinding
+                .Convert(null, (string name) => OperatingSystem.IsWindows() && name.Length > 6 ? name[..6] + "..." : name)
+                .BindDataContext((TDVM vm) => vm.DeviceName, DualBindingMode.OneWay);
+            _deviceName.BindDataContext(label => label.ToolTip, (TDVM vm) => vm.DeviceName, DualBindingMode.OneWay);
             _rawTabletData.TextBinding.BindDataContext((TDVM vm) => vm.RawTabletData, DualBindingMode.OneWay);
             _tabletData.TextBinding.BindDataContext((TDVM vm) => vm.DecodedTabletData, DualBindingMode.OneWay);
             _reportRate.TextBinding.BindDataContext((TDVM vm) => vm.ReportRateString, DualBindingMode.OneWay);
