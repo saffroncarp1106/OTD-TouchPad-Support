@@ -1,4 +1,16 @@
 # OTD-TouchPad-Support
+
+## Experimental downloads
+
+| Platform | Release | Status |
+| --- | --- | --- |
+| Windows | [v0.1.0](https://github.com/saffroncarp1106/OTD-TouchPad-Support/releases/tag/touchpad-windows-v0.1.0) | Experimental; Windows touchpad support |
+| macOS | [v0.0.1](https://github.com/saffroncarp1106/OTD-TouchPad-Support/releases/tag/touchpad-macos-v0.0.1) | Intel x64 test build; awaiting testing on a Mac |
+
+Download the application ZIP under the release's **Assets**. The automatic source-code archives are for developers.
+
+Source and rebuild instructions are on the [Windows branch](https://github.com/saffroncarp1106/OTD-TouchPad-Support/tree/experimental/windows) and [macOS branch](https://github.com/saffroncarp1106/OTD-TouchPad-Support/tree/experimental/macos). Both preserve the OpenTabletDriver license and attribution. Existing release `v0.1.0` is retained.
+
 The goal of the app was to add touchpad support with OTD, to allow for absolute mode and custom sizes. The default windows cursor settings were minimal and.. eh. I have verified it works with the Asus g15, Microsoft Surface, and an old Dell latitude.
 
 To use the program:
@@ -31,5 +43,6 @@ There are quirks, it only supports 1 finger input at a time, it will just and sk
 
 <img width="1713" height="223" alt="image" src="https://github.com/user-attachments/assets/a9b14143-2d26-4dfb-a386-02735e4f51d7" />
 
-# MacOS
-Todo
+# macOS
+
+The experimental macOS build targets Intel x64; Apple Silicon requires Rosetta 2. It is not Apple-notarized and has not yet been run on a Mac. Follow the bundled README and run `bash Prepare-Mac.command` before opening the app. Built-in trackpads only; external Magic Trackpads and hot-plug selection are not implemented.
