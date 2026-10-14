@@ -126,7 +126,7 @@ namespace OpenTabletDriver.UX
             }
 
             commandLineOptions.StartMinimized = results.GetValue(minimizedOption);
-            commandLineOptions.SkipUpdate = results.GetValue(skipUpdate);
+            commandLineOptions.SkipUpdate = OperatingSystem.IsMacOS() || results.GetValue(skipUpdate);
             return commandLineOptions;
         }
 

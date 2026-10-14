@@ -53,7 +53,7 @@ namespace OpenTabletDriver
                 foreach (var oldTouchpad in _inputDeviceTrees.Where(t => t.Properties.Attributes?.ContainsKey("PrecisionTouchpad") == true).ToArray())
                     foreach (var input in oldTouchpad.InputDevices.ToArray())
                         input.Dispose();
-                foreach (var config in _deviceConfigurationProvider.TabletConfigurations.Where(c => !c.DigitizerIdentifiers.Any(i => i.VendorID == 65534 && i.ProductID == 1209)).Concat(Devices.AsusTouchpad.TouchpadSelection.Configurations()))
+                foreach (var config in _deviceConfigurationProvider.TabletConfigurations.Where(c => !c.DigitizerIdentifiers.Any(i => i.VendorID == 65534 && i.ProductID == 1209)).Concat(Devices.AsusTouchpad.TouchpadSelection.Configurations()).Concat(Devices.AsusTouchpad.MacTouchpadSelection.Configurations()))
                 {
                     if (Match(config)is InputDeviceTree tree)
                     {

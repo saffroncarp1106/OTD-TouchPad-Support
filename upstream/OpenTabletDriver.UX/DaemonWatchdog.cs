@@ -34,7 +34,7 @@ namespace OpenTabletDriver.UX
 
         public void Start()
         {
-            if (SystemInterop.CurrentPlatform == PluginPlatform.Windows)
+            if (SystemInterop.CurrentPlatform == PluginPlatform.Windows || SystemInterop.CurrentPlatform == PluginPlatform.MacOS)
                 startInfo.Environment["ASUS_OTD_UI_PARENT"] = Environment.ProcessId.ToString();
             this.daemonProcess = new Process()
             {

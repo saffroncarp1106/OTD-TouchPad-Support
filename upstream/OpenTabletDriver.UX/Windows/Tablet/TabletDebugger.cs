@@ -227,9 +227,17 @@ namespace OpenTabletDriver.UX.Windows.Tablet
             App.Driver.Instance.SetTabletDebug(true);
         }
 
+        private static void BindDeviceName(Label deviceName)
+        {
+            deviceName.TextBinding
+                .Convert(null, (string? name) => OperatingSystem.IsWindows() && name is { Length: > 6 } ? name[..6] + "..." : name ?? string.Empty)
+                .BindDataContext((TDVM vm) => vm.DeviceName, DualBindingMode.OneWay);
+            deviceName.BindDataContext(label => label.ToolTip, (TDVM vm) => vm.DeviceName, DualBindingMode.OneWay);
+        }
+
         private void SetupBindings()
         {
-            _deviceName.TextBinding.BindDataContext((TDVM vm) => vm.DeviceName, DualBindingMode.OneWay);
+            BindDeviceName(_deviceName);
             _rawTabletData.TextBinding.BindDataContext((TDVM vm) => vm.RawTabletData, DualBindingMode.OneWay);
             _tabletData.TextBinding.BindDataContext((TDVM vm) => vm.DecodedTabletData, DualBindingMode.OneWay);
             _reportRate.TextBinding.BindDataContext((TDVM vm) => vm.ReportRateString, DualBindingMode.OneWay);
