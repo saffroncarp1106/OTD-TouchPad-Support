@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup Label="Project Properties">
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(FrameworkBase)</TargetFramework>
+    <NoWarn>VSTHRD100; VSTHRD101; VSTHRD110; VSTHRD200</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Pack">
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>otd</ToolCommandName>
+    <PackageOutputPath>./nupkg</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup Label="Project References">
+    <ProjectReference Include="..\OpenTabletDriver.Desktop\OpenTabletDriver.Desktop.csproj" />
+  </ItemGroup>
+
+</Project>

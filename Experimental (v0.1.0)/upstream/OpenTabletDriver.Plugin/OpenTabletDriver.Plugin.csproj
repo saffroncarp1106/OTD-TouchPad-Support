@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup Label="Project Properties">
+    <TargetFrameworks>$(FrameworkBase)</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup Label="NuGet Package">
+    <PackageId>OpenTabletDriver.Plugin</PackageId>
+    <Description>Library used to create OpenTabletDriver plugins.</Description>
+    <PackageOutputPath>../nupkg</PackageOutputPath>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <BuildDate>$([System.DateTime]::UtcNow.ToString("d"))</BuildDate>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="OpenTabletDriver.Plugin.Attributes.BuildDateAttribute">
+      <_Parameter1>$(BuildDate)</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />
+    <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="NuGet Packages">
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+</Project>

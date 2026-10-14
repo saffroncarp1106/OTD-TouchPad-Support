@@ -1,0 +1,46 @@
+using System;
+using System.ComponentModel.DataAnnotations;
+using Newtonsoft.Json;
+
+namespace OpenTabletDriver.Plugin.Tablet
+{
+    public class PenSpecifications
+    {
+        /// <summary>
+        /// The maximum pressure that the pen supports.
+        /// </summary>
+        [Required(ErrorMessage = $"Pen {nameof(MaxPressure)} must be defined")]
+        public uint MaxPressure { set; get; }
+
+        /// <summary>
+        /// Specifications for the pen buttons.
+        /// </summary>
+        [Required(ErrorMessage = $"{nameof(ButtonCount)} must be defined")]
+        public uint ButtonCount { set; get; }
+
+        private bool _legacyButtonsHaveBeenSet;
+
+        [Obsolete(Globals.LegacyTabletConfigurationProperty)]
+        [JsonIgnore]
+        public ButtonSpecifications Buttons
+        {
+            set
+            {
+                _legacyButtonsHaveBeenSet = true;
+                ButtonCount = value.ButtonCount;
+            }
+            get => new() { ButtonCount = ButtonCount };
+        }
+
+        // hack which allows us to deserialize the object for backwards compatibility, but not emit it in serialization
+#pragma warning disable CS0618 // Type or member is obsolete
+        [JsonProperty(nameof(Buttons))]
+        private ButtonSpecifications Buttons2
+        {
+            set => Buttons = value;
+#pragma warning restore CS0618 // Type or member is obsolete
+        }
+
+        public bool HasLegacyProperties() => _legacyButtonsHaveBeenSet;
+    }
+}

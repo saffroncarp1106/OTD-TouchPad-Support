@@ -1,0 +1,71 @@
+name: .NET CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - 0.6.x
+      - avalonia
+  pull_request:
+jobs:
+  matrixpublish:
+    name: Build all supported platforms
+    uses: ./.github/workflows/build-matrix.yml
+
+  udev:
+    name: Generate udev Rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: ./generate-rules.sh > 70-opentabletdriver.rules
+
+      - name: Upload udev Rules
+        uses: actions/upload-artifact@v4
+        with:
+          name: udev Rules
+          path: 70-opentabletdriver.rules
+          if-no-files-found: error
+
+  linter:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full git history is needed to get a proper list of changed files
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-dotnet
+
+      - name: Lint Changed Files
+        run: |
+          mapfile -t files < <(git diff --name-only --diff-filter=AM HEAD^ HEAD | grep '.*\.cs$')
+          if [ ${#files[@]} -ne 0 ]; then dotnet format OpenTabletDriver.sln --verify-no-changes --include "${files[@]}"; fi
+
+  unittests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-dotnet
+
+      - name: Run tests
+        run: dotnet test
+
+  slnf:
+    name: Validate Solution Filters
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-dotnet
+
+      - name: Windows
+        run: dotnet restore OpenTabletDriver.Windows.slnf
+
+      - name: Linux
+        run: dotnet restore OpenTabletDriver.Linux.slnf
+
+      - name: MacOS
+        run: dotnet restore OpenTabletDriver.MacOS.slnf
