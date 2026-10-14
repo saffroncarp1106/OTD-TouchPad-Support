@@ -1,0 +1,34 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_suffix:
+        description: 'The version suffix for this manual build.'
+        required: false
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  nuget:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_dispatch' }}
+    name: NuGet Deploy Release (Ubuntu Host)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish NuGet package
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.NUGET_AUTH_TOKEN }}
+          SOURCE: https://api.nuget.org/v3/index.json
+        run: |
+          dotnet pack
+          dotnet nuget push ./nupkg/*.nupkg -s "$SOURCE" -k "$NUGET_AUTH_TOKEN"
+
+  matrixpublish:
+    name: Build all supported platforms
+    uses: ./.github/workflows/build-matrix.yml
+    secrets: inherit
+    with:
+      version_suffix: ${{ inputs.version_suffix }}

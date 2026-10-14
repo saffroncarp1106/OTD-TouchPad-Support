@@ -1,0 +1,3 @@
+[*.cs]
+# Eto seemingly automatically disposes of Eto-backed classes, so we don't need CA2213 enabled here
+dotnet_diagnostic.CA2213.severity = none

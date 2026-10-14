@@ -1,0 +1,8 @@
+{
+  "Name": "ASUS G15 Touchpad (Absolute)",
+  "Specifications": {
+    "Digitizer": { "Width": 126.9, "Height": 82.0, "MaxX": 65535, "MaxY": 65535 },
+    "Pen": { "MaxPressure": 1, "ButtonCount": 0 }
+  },
+  "DigitizerIdentifiers": [{ "VendorID": 65534, "ProductID": 1209, "InputReportLength": 9, "ReportParser": "OpenTabletDriver.Configurations.Parsers.ASUS.AsusTouchpadReportParser" }]
+}

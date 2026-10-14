@@ -9,7 +9,22 @@
 
 Download the application ZIP under the release's **Assets**. The automatic source-code archives are for developers.
 
-Source and rebuild instructions are on the [Windows branch](https://github.com/saffroncarp1106/OTD-TouchPad-Support/tree/experimental/windows) and [macOS branch](https://github.com/saffroncarp1106/OTD-TouchPad-Support/tree/experimental/macos). Both preserve the OpenTabletDriver license and attribution. Existing release `v0.1.0` is retained.
+Both platforms are developed from **one shared source tree on `main`**. See [build instructions](BUILD.md), [Windows usage](docs/windows.md), and [macOS usage](docs/macos.md). The platform branches and release tags preserve the original source snapshots for the published downloads; new development belongs on `main`.
+
+## Source layout
+
+```text
+upstream/             Shared OpenTabletDriver solution and both touchpad backends
+tests/                Touchpad queue and macOS encoder tests
+tools/TouchpadProbe/   Windows diagnostic probe using the shared backend files
+tools/diagnostics/    Windows capture utilities
+tools/viewer/         Diagnostic touchpad viewer
+docs/                 Platform setup and release notes
+build.ps1             Shared build entry point; selects the platform
+```
+
+Build Windows with `pwsh ./build.ps1 -Platform windows` or macOS x64 with `pwsh ./build.ps1 -Platform macos`. Outputs go to `artifacts/`. Local caches and generated binaries are excluded from source control. OpenTabletDriver licensing and attribution are preserved in [LICENSE](LICENSE) and [UPSTREAM.md](UPSTREAM.md).
+
 
 The goal of the app was to add touchpad support with OTD, to allow for absolute mode and custom sizes. The default windows cursor settings were minimal and.. eh. I have verified it works with the Asus g15, Microsoft Surface, and an old Dell latitude.
 

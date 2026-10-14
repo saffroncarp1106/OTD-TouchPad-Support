@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup Label="Project Properties">
+    <TargetFrameworks>$(FrameworkBase)</TargetFrameworks>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>VSTHRD100; VSTHRD101; VSTHRD110; VSTHRD200</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OpenTabletDriver.Tests" />
+  </ItemGroup>
+
+  <PropertyGroup Label="NuGet Package">
+    <PackageId>OpenTabletDriver</PackageId>
+    <Description>OpenTabletDriver core library</Description>
+    <PackageOutputPath>../nupkg</PackageOutputPath>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup Label="NuGet Packages">
+    <PackageReference Include="HidSharpCore" Version="1.3.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <ItemGroup Label="Project References">
+    <ProjectReference Include="..\OpenTabletDriver.Plugin\OpenTabletDriver.Plugin.csproj" />
+    <ProjectReference Include="..\OpenTabletDriver.Native\OpenTabletDriver.Native.csproj" />
+    <ProjectReference Include="..\OpenTabletDriver.Configurations\OpenTabletDriver.Configurations.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Label="Configurations">
+    <EmbeddedResource Include=".\Configurations\*\*.json">
+      <IncludeInPackage>true</IncludeInPackage>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
