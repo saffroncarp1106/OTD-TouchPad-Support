@@ -6,6 +6,6 @@
 - Real kernel uinput/evdev integration tests passed: capability discovery, slot-coordinate persistence, frame encoding, multifinger suspension/resume, disable/re-enable state synchronization, and hardware-grab cleanup after disabling output and disposing the stream. Synthetic tests do not generate pointer movement.
 - Linux Mint 22.3/X11 GUI startup and daemon connection passed. Closing the GUI stopped the packaged child daemon.
 - A subsequent live launch detected the ASUS touchpad and logged absolute mapping enabled. Actual cursor accuracy, drag/button behavior, and comfort still need user evaluation.
-- Wayland, Fedora, Apple trackpads, and other models are not validated. This package is x64; Apple Silicon requires a separate ARM64 build.
+- Arm64 WIP.
 
 Run `dotnet run --project tests/LinuxTouchpad/LinuxTouchpad.csproj -c Release` for encoder checks. Add `-- --integration` for kernel tests (requires touchpad/uinput permissions) or `-- --inventory` for dynamic OTD device configurations. Add `-- /path/to/capture.jsonl` to replay a logger capture.
