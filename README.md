@@ -31,7 +31,14 @@ Todo
 
 # Linux v0.0.1 — experimental prerelease
 
-Todo
+The Linux build is early and very much a work in progress for broad support.
+I have a release that has worked on Linux mint (Ubuntu)
+
+To run:
+Extract Files from .zip.
+- Run <code>Prepare Linux.sh</code>
+- Run <code>Start OTD Touchpad.sh</code>
+OTD should then load up.
 
 
 # Debugger
