@@ -20,16 +20,10 @@ There are quirks, it only supports 1 finger input at a time, it will just and sk
 
 <img width="812" height="226" alt="image" src="https://github.com/user-attachments/assets/1f165429-8183-4cac-b0ed-34966700e9d5" />
 
+<img width="1170" height="742" alt="image" src="https://github.com/user-attachments/assets/ee8a0c39-9190-4096-9ee6-a271660599b0" />
 
-<img width="727" height="460" alt="image" src="https://github.com/user-attachments/assets/a1a60b66-49f3-4c62-acf4-b17d19b8f01e" />
+<img width="916" height="817" alt="Screenshot 2026-10-17 114225" src="https://github.com/user-attachments/assets/ce861935-d315-43c7-900a-5c6336c9742d" />
 
-
-<img width="1183" height="901" alt="image" src="https://github.com/user-attachments/assets/4e4c1c3c-508a-4b0a-aafc-a7c7c40b6f01" />
-
-
-<img width="1472" height="743" alt="image" src="https://github.com/user-attachments/assets/98320a58-e440-4653-8668-9980349434da" />
-
-<img width="1713" height="223" alt="image" src="https://github.com/user-attachments/assets/a9b14143-2d26-4dfb-a386-02735e4f51d7" />
 
 # MacOS
 Todo
