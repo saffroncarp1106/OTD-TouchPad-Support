@@ -18,8 +18,6 @@ Enjoy, hopefully.
 There are quirks, it only supports 1 finger input at a time, it will just and skip if you do this, i recommend palm rejection techniques like gloves. 
 
 
-<img width="812" height="226" alt="image" src="https://github.com/user-attachments/assets/1f165429-8183-4cac-b0ed-34966700e9d5" />
-
 <img width="1170" height="742" alt="image" src="https://github.com/user-attachments/assets/ee8a0c39-9190-4096-9ee6-a271660599b0" />
 
 <img width="916" height="817" alt="Screenshot 2026-10-17 114225" src="https://github.com/user-attachments/assets/ce861935-d315-43c7-900a-5c6336c9742d" />
