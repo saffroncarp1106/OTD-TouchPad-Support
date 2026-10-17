@@ -38,7 +38,10 @@ To run:
 Extract Files from .zip.
 - Run <code>Prepare Linux.sh</code>
 - Run <code>Start OTD Touchpad.sh</code>
+
 OTD should then load up.
+
+<img width="960" height="792" alt="image" src="https://github.com/user-attachments/assets/176c7a45-beb3-41b0-8425-e5877147ec57" />
 
 
 # Debugger
