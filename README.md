@@ -1,4 +1,6 @@
 # OTD-TouchPad-Support
+
+# Windows
 The goal of the app was to add touchpad support with OTD, to allow for absolute mode and custom sizes. The default windows cursor settings were minimal and.. eh. I have verified it works with the Asus g15, Microsoft Surface, and an old Dell latitude.
 
 To use the program:
@@ -30,3 +32,18 @@ Todo
 # Linux v0.0.1 — experimental prerelease
 
 Todo
+
+
+# Debugger
+The debugger software is now very in-depth now,
+It provides the HID device string and TouchPad info, a Probe script for positional data, as well as a OTD DeviceReport to verify if the probe info is reaching OTD Dameon.
+
+To run, ensure all files are in the same location.
+- Execute: <Code>Python touchpad_debug.py<Code>
+- Open <Code>OTD-Touchpad-Experimental.exe<Code>
+- After using the Touchpad, click <code>Ctrl+C<code>
+There should be a .json file created in the <code>Results<code> folder.
+Send that to a dev if you are having issues.
+
+<img width="1701" height="717" alt="image" src="https://github.com/user-attachments/assets/8f30ef33-e386-4e5f-b357-63e381977b89" />
+
