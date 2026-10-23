@@ -34,6 +34,9 @@ Todo
 The Linux build is early and very much a work in progress for broad support.
 I have a release that has worked on Linux mint (Ubuntu)
 
+To Do:
+Arch: look at libevdev library which this fork uses, and arch linux has that as an extra library.
+
 To run:
 Extract Files from .zip.
 - Run <code>Prepare Linux.sh</code>
