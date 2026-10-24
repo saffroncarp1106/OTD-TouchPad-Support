@@ -31,11 +31,12 @@ Todo
 
 # Linux v0.0.2 — experimental
 
-The Linux x64 release is intended for Arch-based and Debian/Ubuntu-based distributions. It bundles .NET 8; GTK 3, libevdev, ICU, libusb, and the normal desktop udev/logind environment must be installed by the user. CachyOS (Arch-based) has been verified with KDE Wayland. Debian-family v0.0.2 support has not been live-tested, and touchpad support depends on the kernel driver and desktop session.
+The Linux x64 release is intended for Arch-based and Debian/Ubuntu-based distributions. It bundles .NET 8; GTK 3, libevdev, ICU, libusb, and the normal desktop udev/logind environment must be installed by the user. It has been tested with Linux Mint, CachyOS.
+To Do: Fedora handeling + Macbook linux distro
 
 To run, extract the Linux x64 release, install the native libraries for your distribution, and run <code>Prepare Linux.sh</code> once. Then run <code>Start OTD Touchpad.sh</code> as your normal desktop user. Do not start the GUI with sudo.
 
-See [linux/README.md](linux/README.md) for dependencies, setup details, supported touchpad capabilities, build instructions, and limitations.
+See [linux/README.md](linux/README.md) for dependencies, setup details, supported touchpad capabilities, build instructions, limitation, and clanker slop.
 
 <img width="960" height="792" alt="image" src="https://github.com/user-attachments/assets/176c7a45-beb3-41b0-8425-e5877147ec57" />
 
