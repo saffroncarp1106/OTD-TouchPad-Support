@@ -36,6 +36,22 @@ To Do: Fedora handeling + Macbook linux distro
 
 To run, extract the Linux x64 release, install the native libraries for your distribution, and run <code>Prepare Linux.sh</code> once. Then run <code>Start OTD Touchpad.sh</code> as your normal desktop user. Do not start the GUI with sudo.
 
+Debian
+<code>sudo apt-get update</code>
+<code>sudo apt-get install libgtk-3-dev libevdev-dev libicu-dev libusb-1.0-0-dev</code>
+<code>tar -xzf OTD-Touchpad-Linux-x64.tar.gz</code>
+<code>cd OTD-Touchpad-Linux-x64</code>
+<code>./Prepare\ Linux.sh</code>
+<code>./Start\ OTD\ Touchpad.sh</code>
+
+Arch
+<code>sudo pacman -Sy</code>
+<code>sudo pacman -S gtk3 evdev icu libusb</code>
+<code>tar -xzf OTD-Touchpad-Linux-x64.tar.gz</code>
+<code>cd OTD-Touchpad-Linux-x64</code>
+<code>./Prepare\ Linux.sh</code>
+<code>./Start\ OTD\ Touchpad.sh</code>
+
 See [linux/README.md](linux/README.md) for dependencies, setup details, supported touchpad capabilities, build instructions, limitation, and clanker slop.
 
 <img width="960" height="792" alt="image" src="https://github.com/user-attachments/assets/176c7a45-beb3-41b0-8425-e5877147ec57" />
