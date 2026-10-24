@@ -29,20 +29,13 @@ There are quirks, it only supports 1 finger input at a time, it will just and sk
 Todo
 
 
-# Linux v0.0.1 — experimental prerelease
+# Linux v0.0.2 — experimental
 
-The Linux build is early and very much a work in progress for broad support.
-I have a release that has worked on Linux mint (Ubuntu)
+The Linux x64 release is intended for Arch-based and Debian/Ubuntu-based distributions. It bundles .NET 8; GTK 3, libevdev, ICU, libusb, and the normal desktop udev/logind environment must be installed by the user. CachyOS (Arch-based) has been verified with KDE Wayland. Debian-family v0.0.2 support has not been live-tested, and touchpad support depends on the kernel driver and desktop session.
 
-To Do:
-~~Arch: look at libevdev library which this fork uses, and arch linux has that as an extra library.~~
+To run, extract the Linux x64 release, install the native libraries for your distribution, and run <code>Prepare Linux.sh</code> once. Then run <code>Start OTD Touchpad.sh</code> as your normal desktop user. Do not start the GUI with sudo.
 
-To run:
-Extract Files from .zip.
-- Run <code>Prepare Linux.sh</code>
-- Run <code>Start OTD Touchpad.sh</code>
-
-OTD should then load up.
+See [linux/README.md](linux/README.md) for dependencies, setup details, supported touchpad capabilities, build instructions, and limitations.
 
 <img width="960" height="792" alt="image" src="https://github.com/user-attachments/assets/176c7a45-beb3-41b0-8425-e5877147ec57" />
 

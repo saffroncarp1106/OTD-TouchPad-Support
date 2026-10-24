@@ -6,8 +6,11 @@
 **/.local/
 **/__pycache__/
 **/results/
+**/logs/
+**/userdata/
 **/build/
 artifacts/
 release/
+/OTD.v*.Linux/
 *.user
 .DS_Store
