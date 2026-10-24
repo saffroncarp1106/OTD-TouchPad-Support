@@ -34,7 +34,7 @@ Todo
 The Linux x64 release is intended for Arch-based and Debian/Ubuntu-based distributions. It bundles .NET 8; GTK 3, libevdev, ICU, libusb, and the normal desktop udev/logind environment must be installed by the user. It has been tested with Linux Mint, CachyOS.
 To Do: Fedora handeling + Macbook linux distro
 
-To run, extract the Linux x64 release, install the native libraries for your distribution, and run <code>Prepare Linux.sh</code> once. Then run <code>Start OTD Touchpad.sh</code> as your normal desktop user. Do not start the GUI with sudo.
+To run, extract the Linux x64 release, install the native libraries for your distribution, and run <code>Prepare Linux.sh</code> once. Then run <code>Start OTD Touchpad.sh</code> as your normal desktop user.
 
 Debian
 
