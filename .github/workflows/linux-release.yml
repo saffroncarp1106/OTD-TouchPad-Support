@@ -39,6 +39,31 @@ jobs:
           cat "$RUNNER_TEMP/gui.log"
           test "$status" -eq 124
           grep -q 'Connected to a client' "$RUNNER_TEMP/gui.log"
+      - name: Check Arch build and packaged applications
+        run: |
+          git archive HEAD > "$RUNNER_TEMP/source.tar"
+          docker run --rm \
+            -v "$RUNNER_TEMP/source.tar:/source.tar:ro" \
+            -v "$GITHUB_WORKSPACE/artifacts:/packages:ro" \
+            archlinux:base bash -euo pipefail -c '
+              pacman -Syu --noconfirm --needed dotnet-sdk-8.0 libevdev gtk3 icu libusb tar gzip xorg-server-xvfb xorg-xauth
+              mkdir /build /package-test
+              tar -xf /source.tar -C /build
+              cd /build
+              bash tests/linux-build-layout.sh
+              dotnet run --project tests/LinuxTouchpad/LinuxTouchpad.csproj -c Release -- --inventory
+              bash build-linux.sh
+              tar -xzf /packages/OTD.v0.0.3.Linux.tar.gz -C /package-test
+              cd /package-test/OTD-Touchpad-Linux-x64-v0.0.3
+              ./OpenTabletDriver.Console --help
+              set +e
+              timeout --kill-after=5s 20s xvfb-run -a ./OpenTabletDriver.UX.Gtk --skipupdate > /tmp/gui.log 2>&1
+              status=$?
+              set -e
+              cat /tmp/gui.log
+              test "$status" -eq 124
+              grep -q "Connected to a client" /tmp/gui.log
+            '
       - name: Attach binary to release
         env:
           GH_TOKEN: ${{ github.token }}
