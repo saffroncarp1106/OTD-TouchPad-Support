@@ -67,4 +67,4 @@ jobs:
       - name: Attach binary to release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload V0.0.3Linux artifacts/OTD.v0.0.3.Linux.tar.gz --repo "$GITHUB_REPOSITORY"
+        run: gh release upload V0.0.3Linux artifacts/OTD.v0.0.3.Linux.tar.gz --clobber --repo "$GITHUB_REPOSITORY"
