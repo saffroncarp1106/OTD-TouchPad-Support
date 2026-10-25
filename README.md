@@ -29,7 +29,9 @@ There are quirks, it only supports 1 finger input at a time, it will just and sk
 Todo
 
 
-# Linux v0.0.2 — experimental
+# Linux v0.0.3 — experimental
+
+Source build update. Added a build script in the main folder and clearer errors for missing source files. Extract the whole ZIP and run `bash build-linux.sh` with the .NET 8 SDK installed.
 
 The Linux x64 release is intended for Arch-based and Debian/Ubuntu-based distributions. It bundles .NET 8; GTK 3, libevdev, ICU, libusb, and the normal desktop udev/logind environment must be installed by the user. It has been tested with Linux Mint, CachyOS.
 To Do: Fedora handeling + Macbook linux distro
@@ -42,9 +44,9 @@ Debian
 
 <code>sudo apt-get install libgtk-3-dev libevdev-dev libicu-dev libusb-1.0-0-dev</code>
 
-<code>tar -xzf OTD-Touchpad-Linux-x64.tar.gz</code>
+<code>tar -xzf OTD.v0.0.3.Linux.tar.gz</code>
 
-<code>cd OTD-Touchpad-Linux-x64</code>
+<code>cd OTD-Touchpad-Linux-x64-v0.0.3</code>
 
 <code>./Prepare\ Linux.sh</code>
 
@@ -53,13 +55,13 @@ Debian
 
 Arch
 
-<code>sudo pacman -Sy</code>
+<code>sudo pacman -Syu</code>
 
-<code>sudo pacman -S gtk3 evdev icu libusb</code>
+<code>sudo pacman -S --needed gtk3 libevdev icu libusb</code>
 
-<code>tar -xzf OTD-Touchpad-Linux-x64.tar.gz</code>
+<code>tar -xzf OTD.v0.0.3.Linux.tar.gz</code>
 
-<code>cd OTD-Touchpad-Linux-x64</code>
+<code>cd OTD-Touchpad-Linux-x64-v0.0.3</code>
 
 <code>./Prepare\ Linux.sh</code>
 
