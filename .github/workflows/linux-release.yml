@@ -1,0 +1,45 @@
+name: Linux release build
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: V0.0.3Linux
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install native libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libevdev2 libgtk-3-0 libusb-1.0-0 libicu70 xvfb
+      - name: Check scripts and touchpad tests
+        run: |
+          bash tests/linux-build-layout.sh
+          dotnet run --project tests/LinuxTouchpad/LinuxTouchpad.csproj -c Release -- --inventory
+      - name: Build portable package
+        run: bash build-linux.sh
+      - name: Check packaged applications
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/package-test"
+          tar -xzf artifacts/OTD.v0.0.3.Linux.tar.gz -C "$RUNNER_TEMP/package-test"
+          cd "$RUNNER_TEMP/package-test/OTD-Touchpad-Linux-x64-v0.0.3"
+          ./OpenTabletDriver.Console --help
+          set +e
+          timeout --kill-after=5s 20s xvfb-run -a ./OpenTabletDriver.UX.Gtk --skipupdate > "$RUNNER_TEMP/gui.log" 2>&1
+          status=$?
+          set -e
+          cat "$RUNNER_TEMP/gui.log"
+          test "$status" -eq 124
+          grep -q 'Connected to a client' "$RUNNER_TEMP/gui.log"
+      - name: Attach binary to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload V0.0.3Linux artifacts/OTD.v0.0.3.Linux.tar.gz --repo "$GITHUB_REPOSITORY"
