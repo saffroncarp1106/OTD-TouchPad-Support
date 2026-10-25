@@ -1,4 +1,6 @@
-# OpenTabletDriver Touchpad — Linux x64 v0.0.2
+# OpenTabletDriver Touchpad — Linux x64 v0.0.3
+
+Source build update. Added a build script in the main folder and clearer errors for missing files. Full Linux build still needs testing for v0.0.3.
 
 This experimental fork turns Linux touchpads into OTD devices for single-finger absolute positioning. It uses a native C# libevdev backend and the kernel's touchpad driver, independently of X11/Wayland. Python and an installed .NET runtime are not needed for the packaged app.
 
@@ -19,14 +21,16 @@ Arch package reference: https://archlinux.org/packages/extra/x86_64/gtk3/
 
 ### Binary release versus source download
 
-Run `bash linux/build-linux.sh` from the repository root to create the portable release folder and `artifacts/OTD.v0.0.2.Linux.tar.gz`. Extract the archive to run the release. Its launcher and `OpenTabletDriver.UX.Gtk` executable are in the same directory.
+Run `bash linux/build-linux.sh` from the repository root to create the portable release folder and `artifacts/OTD.v0.0.3.Linux.tar.gz`. Extract the archive to run the release. Its launcher and `OpenTabletDriver.UX.Gtk` executable are in the same directory.
 
-The repository source contains no prebuilt executable. To build it from the repository root:
+Extract the whole source ZIP. Keep linux/ and upstream/ together, then open a terminal in the folder containing them. To build:
 
 ```bash
 sudo pacman -S --needed dotnet-sdk-8.0
-bash linux/build-linux.sh
-bash "artifacts/OTD-Touchpad-Linux-x64-v0.0.2/Start OTD Touchpad.sh"
+bash build-linux.sh --check-source
+bash build-linux.sh
+bash "artifacts/OTD-Touchpad-Linux-x64-v0.0.3/Prepare Linux.sh"
+bash "artifacts/OTD-Touchpad-Linux-x64-v0.0.3/Start OTD Touchpad.sh"
 ```
 
 The source-tree launcher forwards to this build output and builds it when an SDK is available. If an SDK is missing, it explains how to build or obtain the binary release before requesting administrator access. Builds use a new output directory and stop if it already exists, which keeps prior settings and logs out of a fresh release. `OTD_DOTNET` selects an SDK executable; `OTD_LINUX_OUTPUT` selects a custom build/launch output directory. Use a new absolute path for this override.
@@ -35,7 +39,7 @@ The source-tree launcher forwards to this build output and builds it when an SDK
 
 Install `libevdev2`, `libgtk-3-0`, `libusb-1.0-0`, and your distribution's ICU runtime package. The standard desktop udev and logind services are also required.
 
-The release is v0.0.2; the upstream OTD assembly version remains `0.6.7-touchpad-linux.2` to preserve upstream versioning.
+The release is v0.0.3; the upstream OTD assembly version remains `0.6.7-touchpad-linux.3` to preserve upstream versioning.
 
 ## Start
 
