@@ -24,7 +24,20 @@ internal static class Program
             ("ASUS Precision Touchpad [04F3:319F] (Absolute)", "ASUS P..."),
             ("123456", "123456"), ("1234567", "123456..."), ("Wacom", "Wacom"), ("", "") })
         {
-            var report = new DebugReportData { Tablet = new TabletReference { Properties = new TabletConfiguration { Name = name } } };
+            var report = new DebugReportData
+            {
+                Path = string.Empty,
+                Data = Array.Empty<byte>(),
+                Tablet = new TabletReference
+                {
+                    Properties = new TabletConfiguration
+                    {
+                        Name = name,
+                        Specifications = new() { Digitizer = new(), Pen = new() },
+                        DigitizerIdentifiers = []
+                    }
+                }
+            };
             typeof(TabletDebuggerViewModel).GetField("_reportData", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(vm, report);
             typeof(ViewModel).GetMethod("RaiseChanged", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(vm, new object[] { "DeviceName" });
             Check(label.Text == expected, $"Expected '{expected}', got '{label.Text}'");

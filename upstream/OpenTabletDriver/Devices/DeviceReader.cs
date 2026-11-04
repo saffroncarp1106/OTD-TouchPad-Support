@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using OpenTabletDriver.Plugin;
@@ -7,7 +8,7 @@ using OpenTabletDriver.Plugin.Tablet;
 
 namespace OpenTabletDriver.Devices
 {
-    public class DeviceReader<T> : IDisposable where T : IDeviceReport
+    public class DeviceReader<T> : IDisposable where T : class, IDeviceReport
     {
         public DeviceReader(IDeviceEndpoint endpoint, IReportParser<T> reportParser)
         {
@@ -32,7 +33,7 @@ namespace OpenTabletDriver.Devices
         /// <summary>
         /// The raw device endpoint report stream.
         /// </summary>
-        public IDeviceEndpointStream ReportStream { protected set; get; }
+        public IDeviceEndpointStream? ReportStream { protected set; get; }
 
         /// <summary>
         /// The <see cref="IReportParser{T}"/> in which the device reports will be parsed with.
@@ -47,7 +48,7 @@ namespace OpenTabletDriver.Devices
         /// <summary>
         /// Invoked when a new report comes in from the device.
         /// </summary>
-        public event EventHandler<T> Report;
+        public event EventHandler<T>? Report;
 
         /// <summary>
         /// Invoked when a new report comes in from the device.
@@ -56,7 +57,7 @@ namespace OpenTabletDriver.Devices
         /// This will only be invoked when <see cref="RawClone"/> is set to true.
         /// This report is not meant in any way to be modified, as it is supposed to represent the original data.
         /// </remarks>
-        public event EventHandler<T> RawReport;
+        public event EventHandler<T>? RawReport;
 
         /// <summary>
         /// Whether the device is actively emitting reports and being parsed.
@@ -74,8 +75,9 @@ namespace OpenTabletDriver.Devices
         /// <summary>
         /// Invoked when <see cref="Connected"/> is changed.
         /// </summary>
-        public event EventHandler<bool> ConnectionStateChanged;
+        public event EventHandler<bool>? ConnectionStateChanged;
 
+        [MemberNotNullWhen(true, nameof(ReportStream))]
         protected virtual bool Initialize()
         {
             try
@@ -101,18 +103,32 @@ namespace OpenTabletDriver.Devices
 
         protected void Main()
         {
+            byte[]? data = null;
             try
             {
                 Connected = true;
                 while (Connected)
                 {
-                    var data = ReportStream.Read();
-                    if (Parser.Parse(data) is T report)
-                        OnReport(report);
+                    data = ReportStream!.Read();
 
-                    // We create a clone of the report to avoid data being modified on the tablet debugger.
-                    if (RawClone && RawReport != null && Parser.Parse(data) is T debugReport)
-                        OnRawReport(debugReport);
+                    T? parsed;
+
+                    try
+                    {
+                        parsed = Parser.Parse(data);
+                    }
+                    catch (IndexOutOfRangeException e)
+                    {
+                        Log.Write("Device", $"Unable to parse tablet data {Extensions.PrettyPrintHex(data)}", LogLevel.Warning);
+                        Log.Exception(e);
+                        parsed = new DeviceReport(data) as T;
+                    }
+
+                    if (parsed is not { } report) continue;
+
+                    if (RawClone)
+                        OnRawReport(report);
+                    OnReport(report);
                 }
             }
             catch (ObjectDisposedException dex)
@@ -130,6 +146,9 @@ namespace OpenTabletDriver.Devices
             catch (Exception ex)
             {
                 Log.Exception(ex);
+
+                string formattedTabletData = data != null ? Extensions.PrettyPrintHex(data) : "<null>";
+                Log.Write("Device", $"Last report read from tablet: {formattedTabletData}");
             }
             finally
             {

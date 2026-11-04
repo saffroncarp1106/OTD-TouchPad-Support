@@ -25,7 +25,7 @@ namespace OpenTabletDriver.Plugin.Output
         /// <summary>
         /// The class in which the final relative positioned output is handled.
         /// </summary>
-        public abstract IRelativePointer Pointer { set; get; }
+        public abstract IRelativePointer? Pointer { set; get; }
 
         private Vector2 sensitivity;
 
@@ -146,12 +146,18 @@ namespace OpenTabletDriver.Plugin.Output
                 eraserHandler.SetEraser(eraserReport.Eraser);
             if (report is ITiltReport tiltReport && Pointer is ITiltHandler tiltHandler && !DisableTilt)
                 tiltHandler.SetTilt(tiltReport.Tilt);
+            if (report is IRotationReport rotationReport && Pointer is IRotationHandler rotationHandler &&
+                !DisableRotation && Tablet?.Properties.Specifications.Pen.MaxRotation != null && Tablet?.Properties.Specifications.Pen.MinRotation != null)
+            {
+                var rotationRange = (float)Tablet.Properties.Specifications.Pen.MaxRotation! - (float)Tablet.Properties.Specifications.Pen.MinRotation!;
+                rotationHandler.SetRotation((rotationReport.Rotation - (float)Tablet.Properties.Specifications.Pen.MinRotation!) / rotationRange);
+            }
             if (report is ITabletReport tabletReport && Pointer is IPressureHandler pressureHandler &&
                 !DisablePressure && Tablet?.Properties.Specifications.Pen != null)
                 pressureHandler.SetPressure(tabletReport.Pressure / (float)Tablet.Properties.Specifications.Pen.MaxPressure);
 
             // make sure to set the position last
-            if (report is IAbsolutePositionReport absReport)
+            if (Pointer != null && report is IAbsolutePositionReport absReport)
                 Pointer.SetPosition(absReport.Position);
             if (Pointer is ISynchronousPointer synchronousPointer)
             {

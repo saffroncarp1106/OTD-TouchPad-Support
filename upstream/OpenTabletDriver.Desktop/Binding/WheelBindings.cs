@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using OpenTabletDriver.Plugin.Tablet;
 
-#nullable enable
-
 namespace OpenTabletDriver.Desktop.Binding
 {
     /// <summary>
@@ -105,9 +103,6 @@ namespace OpenTabletDriver.Desktop.Binding
                 case < 0:
                     CounterClockwiseRotation?.Invoke(tablet, report, counts * _stepsPerTick);
                     ClockwiseRotation?.Reset();
-                    break;
-                case 0:
-                    Reset();
                     break;
             }
         }

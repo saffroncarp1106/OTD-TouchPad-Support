@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json;
+using OpenTabletDriver.Plugin;
 using OpenTabletDriver.Plugin.Attributes;
 using OpenTabletDriver.Plugin.DependencyInjection;
 using OpenTabletDriver.Plugin.Tablet;
@@ -13,7 +14,7 @@ namespace OpenTabletDriver.Desktop.Reflection
     {
         private static readonly Type _tabletRefType = typeof(TabletReference);
 
-        public PluginSettingStore(Type type, bool enable = true)
+        public PluginSettingStore(Type? type, bool enable = true)
         {
             Path = type?.FullName;
             Settings = type != null ? GetSettingsForType(type) : new ObservableCollection<PluginSetting>();
@@ -22,35 +23,39 @@ namespace OpenTabletDriver.Desktop.Reflection
 
         public PluginSettingStore(object source, bool enable = true)
         {
-            if (source != null)
-            {
-                var sourceType = source.GetType();
-                Path = sourceType.FullName;
-                Settings = GetSettingsForType(sourceType, source);
-                Enable = enable;
-            }
-            else
-            {
-                throw new NullReferenceException("Creating a plugin setting store from a null object is not allowed.");
-            }
+            var sourceType = source.GetType();
+
+            Path = sourceType.FullName;
+
+            Settings = GetSettingsForType(sourceType, source);
+            Enable = enable;
         }
 
         [JsonConstructor]
-        private PluginSettingStore()
+        public PluginSettingStore(string path, ObservableCollection<PluginSetting> settings)
         {
+            Path = path;
+            Settings = settings;
         }
 
-        public string Path { set; get; }
+        // TODO: make non-nullable or similar fix, since it never makes sense to have a null/empty path? -gonX
+        public string? Path { set; get; }
 
         [JsonIgnore]
-        public string Name => AppInfo.PluginManager.GetFriendlyName(Path);
+        public string? Name => Path != null ? AppInfo.PluginManager.GetFriendlyName(Path) : null;
 
         public ObservableCollection<PluginSetting> Settings { set; get; }
 
         public bool Enable { set; get; }
 
-        public T Construct<T>(TabletReference tabletReference = null, bool trigger = true) where T : class
+        public T? Construct<T>(TabletReference? tabletReference = null, bool trigger = true) where T : class
         {
+            if (Path == null)
+            {
+                Log.Write($"Construct<T>", $"{nameof(Path)} is null, returning null", LogLevel.Debug);
+                return null;
+            }
+
             var obj = AppInfo.PluginManager.ConstructObject<T>(Path);
             ApplySettings(obj);
             if (trigger)
@@ -58,7 +63,7 @@ namespace OpenTabletDriver.Desktop.Reflection
             return obj;
         }
 
-        public T Construct<T>(IServiceManager provider, TabletReference tabletReference = null) where T : class
+        public T? Construct<T>(IServiceManager provider, TabletReference? tabletReference = null) where T : class
         {
             var obj = Construct<T>(tabletReference, false);
             PluginManager.Inject(provider, obj);
@@ -66,7 +71,7 @@ namespace OpenTabletDriver.Desktop.Reflection
             return obj;
         }
 
-        public static PluginSettingStore FromPath(string path)
+        public static PluginSettingStore? FromPath(string? path)
         {
             var pathType = AppInfo.PluginManager.PluginTypes.FirstOrDefault(t => t.FullName == path);
             return pathType != null ? new PluginSettingStore(pathType) : null;
@@ -76,7 +81,7 @@ namespace OpenTabletDriver.Desktop.Reflection
         /// Apply <see cref="Settings"/> values for <see cref="PropertyAttribute"/> properties
         /// </summary>
         /// <param name="target">The target to apply settings for</param>
-        public void ApplySettings(object target)
+        public void ApplySettings(object? target)
         {
             if (target == null)
                 return;
@@ -98,7 +103,7 @@ namespace OpenTabletDriver.Desktop.Reflection
             }
         }
 
-        private static ObservableCollection<PluginSetting> GetSettingsForType(Type targetType, object source = null)
+        private static ObservableCollection<PluginSetting> GetSettingsForType(Type targetType, object? source = null)
         {
             var settings = from property in targetType.GetProperties()
                            where property.GetCustomAttribute<PropertyAttribute>() is PropertyAttribute
@@ -147,17 +152,25 @@ namespace OpenTabletDriver.Desktop.Reflection
             return name + suffix;
         }
 
-        public TypeInfo GetTypeInfo()
+        public string GetElidedHumanReadableString(int elideAt)
+        {
+            var baseString = this.GetHumanReadableString();
+            if (baseString.Length > elideAt)
+                return baseString[..elideAt] + "...";
+            return baseString;
+        }
+
+        public TypeInfo? GetTypeInfo()
         {
             return AppInfo.PluginManager.PluginTypes.FirstOrDefault(t => t.FullName == Path);
         }
 
-        public TypeInfo GetTypeInfo<T>()
+        public TypeInfo? GetTypeInfo<T>()
         {
             return AppInfo.PluginManager.GetChildTypes<T>().FirstOrDefault(t => t.FullName == Path);
         }
 
-        private static void TriggerEventMethods(object obj, TabletReference tabletReference)
+        private static void TriggerEventMethods(object? obj, TabletReference? tabletReference)
         {
             if (obj == null)
                 return;
@@ -177,6 +190,11 @@ namespace OpenTabletDriver.Desktop.Reflection
 
             foreach (var method in methods)
                 method.Invoke(obj, Array.Empty<object>());
+        }
+
+        public PluginSettingStore? Clone()
+        {
+            return JsonConvert.DeserializeObject<PluginSettingStore>(JsonConvert.SerializeObject(this));
         }
     }
 }

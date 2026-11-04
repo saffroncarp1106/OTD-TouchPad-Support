@@ -21,7 +21,7 @@ public sealed class LinuxTouchpadHub : IDeviceHub, IDisposable
     private readonly Timer watcher;
     private IDeviceEndpoint[] previous;
     private int checking;
-    public event EventHandler<DevicesChangedEventArgs> DevicesChanged;
+    public event EventHandler<DevicesChangedEventArgs>? DevicesChanged;
     public LinuxTouchpadHub()
     {
         previous = LinuxTouchpadSelection.Refresh();
@@ -139,11 +139,11 @@ public static class LinuxTouchpadControl
 
 internal sealed class LinuxTouchpadEndpoint : IDeviceEndpoint
 {
-    internal string Path, Identity, Signature;
+    internal required string Path, Identity, Signature;
     internal LinuxAxis XAxis, YAxis;
     internal bool Multitouch;
     internal float Width, Height;
-    internal static LinuxTouchpadEndpoint Discover(string path, IntPtr dev)
+    internal static LinuxTouchpadEndpoint? Discover(string path, IntPtr dev)
     {
         string name = Text(libevdev_get_name(dev));
         if (name.StartsWith("OpenTabletDriver", StringComparison.Ordinal) || libevdev_has_property(dev, 1) != 0 || libevdev_has_property(dev, 5) != 0)
@@ -167,7 +167,7 @@ internal sealed class LinuxTouchpadEndpoint : IDeviceEndpoint
         float height = y.Millimeters ?? (x.Millimeters.HasValue ? width : 100) * (float)((double)y.Max - y.Min) / (float)((double)x.Max - x.Min);
         if (!x.Millimeters.HasValue || !y.Millimeters.HasValue)
             LinuxTouchpadSelection.WarnOnce($"{name}: physical resolution is missing; using an estimated {width:F1} x {height:F1} mm area. Set OTD_TOUCHPAD_WIDTH_MM and OTD_TOUCHPAD_HEIGHT_MM if needed.");
-        string widthOverride = Environment.GetEnvironmentVariable("OTD_TOUCHPAD_WIDTH_MM"), heightOverride = Environment.GetEnvironmentVariable("OTD_TOUCHPAD_HEIGHT_MM");
+        string? widthOverride = Environment.GetEnvironmentVariable("OTD_TOUCHPAD_WIDTH_MM"), heightOverride = Environment.GetEnvironmentVariable("OTD_TOUCHPAD_HEIGHT_MM");
         if (widthOverride != null || heightOverride != null)
         {
             if (!float.TryParse(widthOverride, NumberStyles.Float, CultureInfo.InvariantCulture, out width) ||
@@ -187,7 +187,7 @@ internal sealed class LinuxTouchpadEndpoint : IDeviceEndpoint
     public int OutputReportLength => 0;
     public int FeatureReportLength => 0;
     public string Manufacturer => "Linux evdev Touchpad";
-    public string ProductName { get; private set; }
+    public required string ProductName { get; init; }
     public string FriendlyName => ProductName;
     public string SerialNumber => Identity;
     public string DevicePath => "evdev:" + Path + ":" + Signature;
@@ -195,6 +195,8 @@ internal sealed class LinuxTouchpadEndpoint : IDeviceEndpoint
     public IDictionary<string, string> DeviceAttributes => new Dictionary<string, string> { ["Transport"] = "Linux evdev" };
     public string GetDeviceString(byte index) => index == 1 ? Manufacturer : ProductName;
     public IDeviceEndpointStream Open() => new LinuxTouchpadStream(this);
+    public void OpenAndSendFeatureInit(byte[] initData) => throw new NotSupportedException();
+    public void OpenAndSendOutputInit(byte[] initData) => throw new NotSupportedException();
 }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2213", Justification = "Native resources are disposed by the reader thread finally block; Dispose joins that thread.")]

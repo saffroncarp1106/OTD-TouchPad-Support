@@ -1,25 +1,52 @@
 # Build the shared source
 
-Install the .NET 8 SDK and PowerShell 7. Both platform builds use the same `upstream/OpenTabletDriver.sln` tree. Run commands from the repository root. NuGet package restore requires network access on a clean machine.
+The shared `upstream/` tree is based on OpenTabletDriver v0.6.8.1 and requires the .NET 10 SDK. Windows and macOS builds use PowerShell 7; Linux builds use Bash. A clean restore requires network access.
+
+## Windows and macOS
+
+Run from the repository root:
 
 ```powershell
-pwsh ./build.ps1 -Platform windows
-pwsh ./build.ps1 -Platform macos
+pwsh ./build.ps1 -Platform windows -Architecture x64
+pwsh ./build.ps1 -Platform windows -Architecture arm64
+pwsh ./build.ps1 -Platform macos -Architecture arm64
+pwsh ./build.ps1 -Platform macos -Architecture x64
 ```
 
-Windows builds require Windows and produce the self-contained x64 application and diagnostic probe in `artifacts/windows/app/`. Run `OTD-Touchpad-Experimental.exe` there. The macOS target produces self-contained Intel x64 daemon and UI outputs in `artifacts/macos/daemon/` and `artifacts/macos/ui/`; these are unbundled build outputs. For a prepared `.app` with setup instructions, use the published macOS release. Apple Silicon currently requires Rosetta 2.
+Architecture defaults to x64. Use `-Dotnet /path/to/dotnet` when the SDK is not on PATH. Each target has its own `artifacts/<platform>-<architecture>/` output directory. Builds are self-contained, so users do not need .NET installed.
 
-An explicit SDK executable can be supplied with `-Dotnet /path/to/dotnet`. Generated outputs are excluded from Git. These developer build outputs are not release packages: distribution also needs the appropriate app bundle, source archive and third-party license notices. The original packaging scripts and source are retained in the platform release tags. Published ZIPs were not rebuilt as part of source consolidation.
+Windows outputs the existing `app/OTD-Touchpad-Experimental.exe`, setup command, and diagnostic tools. macOS builds must run on a Mac; they produce `OpenTabletDriver-Touchpad.app` and a ZIP in the target directory. The Mac bundle uses a local ad-hoc signature, retains the existing touchpad bundle identifier, and requires no preparation script. It is not notarized. See [docs/macos.md](docs/macos.md) for permissions and testing.
 
-## Tests
+## Linux
 
-```powershell
+```bash
+bash build-linux.sh
+OTD_ARCHITECTURE=arm64 bash build-linux.sh
+```
+
+Architecture defaults to x64. Use `OTD_DOTNET=/path/to/dotnet` if needed. Outputs and archives include the OTD version and architecture. Existing GTK 3, libevdev, libusb, ICU, and udev/logind requirements remain applicable; dependencies must match the target architecture. Existing output paths are not overwritten. `--check-source` validates the source layout without building.
+
+The existing GitHub Linux workflow is pinned to the historical V0.0.3Linux release and remains a rebuild workflow for that release. Use these local commands for the updated source. The platform releases are Windows v0.1.3, macOS V0.0.2, and Linux V0.0.4.
+
+## Checks
+
+```bash
 dotnet run --project tests/TouchpadQueue/TouchpadQueue.csproj -c Release
 dotnet run --project tests/MacTouchpad/MacTouchpad.csproj -c Release
+dotnet run --project tests/LinuxTouchpad/LinuxTouchpad.csproj -c Release
+bash tests/linux-build-layout.sh
 ```
 
-The macOS encoder tests can run on Windows and do not exercise Apple's native input callbacks. Real macOS permissions, pointer behavior and Rosetta remain unverified. Optional recorded-capture replay accepts a capture path after `--`; personal captures are not committed.
+The Windows WPF debugger tests run on Windows:
 
-## Publication validation
+```powershell
+dotnet run --project tests/DebuggerLabel/DebuggerLabel.csproj -c Release
+```
 
-On October 13, 2026, both platform targets built successfully from this shared tree on Windows with .NET SDK 8.0.425. The touchpad queue and macOS encoder test suites passed. Existing CA2216 disposal-analysis warnings remain in the native touchpad classes. Cross-compilation does not confirm native macOS runtime behavior.
+The encoder/queue tests do not exercise real native touchpad callbacks. Cross-compilation confirms build compatibility, not hardware behavior. Before publishing, test the actual target machines and include the matching source and third-party notices with release packages. Existing upstream/native disposal-analysis warnings remain.
+
+## Local migration validation
+
+The macOS ARM64/Intel, Windows x64/ARM64, and Linux x64/ARM64 builds succeeded locally. The Windows WPF debugger test project compiled; running its UI test still requires Windows. The queue, Mac encoder/ABI, Linux encoder/ABI, and source-layout checks passed.
+
+On macOS, the upstream suite passed 2,135 tests with 7 skips using `--filter 'FullyQualifiedName!~HidSharpEndpointTest'`. That class assumes the process is running on Linux when testing Linux HID paths, so it is excluded on this Mac. The virtual ASUS configuration uses upstream's existing SkipTests metadata for physical LPI checks because its coordinates are normalized; its actual dimensions are preserved. Basic macOS ARM64 touchpad operation has been tested. Windows, Linux, Intel macOS, and extended sleep/wake behavior still require testing on the target hardware.

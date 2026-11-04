@@ -16,7 +16,7 @@ namespace OpenTabletDriver.Devices.AsusTouchpad
         private readonly Timer watcher;
         private IDeviceEndpoint[] previous = Array.Empty<IDeviceEndpoint>();
         private int checking;
-        public event EventHandler<DevicesChangedEventArgs> DevicesChanged;
+        public event EventHandler<DevicesChangedEventArgs>? DevicesChanged;
         public AsusTouchpadHub()
         {
             watcher = new Timer(_ => Poll(), null, 2000, 2000);
@@ -136,6 +136,8 @@ namespace OpenTabletDriver.Devices.AsusTouchpad
 
         public string GetDeviceString(byte index) => index == 1 ? Manufacturer : ProductName;
         public IDeviceEndpointStream Open() => new AsusStream(this);
+        public void OpenAndSendFeatureInit(byte[] initData) => throw new NotSupportedException();
+        public void OpenAndSendOutputInit(byte[] initData) => throw new NotSupportedException();
     }
 
     internal sealed class AsusStream : IDeviceEndpointStream
@@ -166,10 +168,10 @@ namespace OpenTabletDriver.Devices.AsusTouchpad
     internal static class AsusBroker
     {
         static readonly object sync = new();
-        static event Action<byte[]> Report;
-        static event Action Removed;
-        static TouchpadReceiver receiver;
-        static TouchpadDevice device;
+        static event Action<byte[]>? Report;
+        static event Action? Removed;
+        static TouchpadReceiver? receiver;
+        static TouchpadDevice? device;
         static uint? primary;
         static bool hadContact;
         public static void Subscribe(AsusEndpoint endpoint, Action<byte[]> callback, Action removed)
@@ -201,7 +203,7 @@ namespace OpenTabletDriver.Devices.AsusTouchpad
 
                     Log.Write("Touchpad", $"Connected {endpoint.ProductName}; {endpoint.Profile.Width} x {endpoint.Profile.Height} mm. Single-finger absolute mode; Ctrl+Alt+F12 toggles mapping.");
                 }
-                else if (device.Path != endpoint.Path || device.Signature != endpoint.Signature)
+                else if (device == null || device.Path != endpoint.Path || device.Signature != endpoint.Signature)
                     throw new InvalidOperationException("Stop the current touchpad before switching devices.");
                 Report += callback;
                 Removed += removed;
@@ -216,8 +218,8 @@ namespace OpenTabletDriver.Devices.AsusTouchpad
 
         public static void Unsubscribe(Action<byte[]> callback, Action removed)
         {
-            TouchpadReceiver old = null;
-            TouchpadDevice oldDevice = null;
+            TouchpadReceiver? old = null;
+            TouchpadDevice? oldDevice = null;
             lock (sync)
             {
                 Report -= callback;

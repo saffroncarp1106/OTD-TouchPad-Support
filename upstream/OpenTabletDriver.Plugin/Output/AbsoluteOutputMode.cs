@@ -12,12 +12,12 @@ namespace OpenTabletDriver.Plugin.Output
     public abstract class AbsoluteOutputMode : OutputMode
     {
         private Vector2 min, max;
-        private Area outputArea, inputArea;
+        private Area? outputArea, inputArea;
 
         /// <summary>
         /// The area in which the tablet's input is transformed to.
         /// </summary>
-        public Area Input
+        public Area? Input
         {
             set
             {
@@ -30,7 +30,7 @@ namespace OpenTabletDriver.Plugin.Output
         /// <summary>
         /// The area in which the final processed output is transformed to.
         /// </summary>
-        public Area Output
+        public Area? Output
         {
             set
             {
@@ -43,7 +43,7 @@ namespace OpenTabletDriver.Plugin.Output
         /// <summary>
         /// The class in which the final absolute positioned output is handled.
         /// </summary>
-        public abstract IAbsolutePointer Pointer { set; get; }
+        public abstract IAbsolutePointer? Pointer { set; get; }
 
         /// <summary>
         /// Whether to clip all tablet inputs to the assigned areas.
@@ -117,7 +117,7 @@ namespace OpenTabletDriver.Plugin.Output
         /// Transposes, transforms, and performs all absolute positioning calculations to a <see cref="IAbsolutePositionReport"/>.
         /// </summary>
         /// <param name="report">The <see cref="IAbsolutePositionReport"/> in which to transform.</param>
-        protected override IAbsolutePositionReport Transform(IAbsolutePositionReport report)
+        protected override IAbsolutePositionReport? Transform(IAbsolutePositionReport report)
         {
             // Apply transformation
             var pos = Vector2.Transform(report.Position, this.TransformationMatrix);
@@ -145,12 +145,18 @@ namespace OpenTabletDriver.Plugin.Output
                 eraserHandler.SetEraser(eraserReport.Eraser);
             if (report is ITiltReport tiltReport && Pointer is ITiltHandler tiltHandler && !DisableTilt)
                 tiltHandler.SetTilt(tiltReport.Tilt);
+            if (report is IRotationReport rotationReport && Pointer is IRotationHandler rotationHandler &&
+                !DisableRotation && Tablet?.Properties.Specifications.Pen.MaxRotation != null && Tablet?.Properties.Specifications.Pen.MinRotation != null)
+            {
+                var rotationRange = (float)Tablet.Properties.Specifications.Pen.MaxRotation! - (float)Tablet.Properties.Specifications.Pen.MinRotation!;
+                rotationHandler.SetRotation((rotationReport.Rotation - (float)Tablet.Properties.Specifications.Pen.MinRotation!) / rotationRange);
+            }
             if (report is ITabletReport tabletReport && Pointer is IPressureHandler pressureHandler &&
                 !DisablePressure && Tablet?.Properties.Specifications.Pen != null)
                 pressureHandler.SetPressure(tabletReport.Pressure / (float)Tablet.Properties.Specifications.Pen.MaxPressure);
 
             // make sure to set the position last
-            if (report is IAbsolutePositionReport absReport)
+            if (Pointer != null && report is IAbsolutePositionReport absReport)
                 Pointer.SetPosition(absReport.Position);
             if (Pointer is ISynchronousPointer synchronousPointer)
             {

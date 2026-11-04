@@ -6,7 +6,6 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using OpenTabletDriver.Desktop;
-using OpenTabletDriver.Desktop.Diagnostics;
 using OpenTabletDriver.Desktop.Interop;
 using OpenTabletDriver.Desktop.Reflection;
 using OpenTabletDriver.Plugin;
@@ -24,14 +23,14 @@ namespace OpenTabletDriver.Console
         private static async Task HasUpdate()
         {
             if (!await EnsureDaemonReady()) return;
-            var hasUpdate = await Driver.Instance.CheckForUpdates() is not null;
+            var hasUpdate = await Driver.Instance!.CheckForUpdates() is not null;
             await Out.WriteLineAsync(hasUpdate.ToString().ToLowerInvariant());
         }
 
         private static async Task InstallUpdate()
         {
             if (!await EnsureDaemonReady()) return;
-            if (await Driver.Instance.CheckForUpdates() is not null)
+            if (await Driver.Instance!.CheckForUpdates() is not null)
             {
                 await Driver.Instance.InstallUpdate();
             }
@@ -66,6 +65,7 @@ namespace OpenTabletDriver.Console
             GetAndRefreshPresetDirectory();
 
             var preset = AppInfo.PresetManager.FindPreset(name);
+            if (preset == null) throw new ArgumentException($"Preset {name} not found");
             await ApplySettings(preset.Settings);
         }
 
@@ -94,8 +94,7 @@ namespace OpenTabletDriver.Console
         {
             var presetDir = new DirectoryInfo(AppInfo.Current.PresetDirectory);
 
-            if (!presetDir.Exists)
-                presetDir.Create();
+            Debug.Assert(presetDir.Exists, "presetDir was expected to be created before we received the value");
 
             AppInfo.PresetManager.Refresh();
 
@@ -110,6 +109,9 @@ namespace OpenTabletDriver.Console
         {
             await ModifyProfile(tablet, p =>
             {
+                if (p.AbsoluteModeSettings == null)
+                    throw new InvalidOperationException($"Could not find {nameof(p.AbsoluteModeSettings)} in profile");
+
                 p.AbsoluteModeSettings.Display.Width = width;
                 p.AbsoluteModeSettings.Display.Height = height;
                 p.AbsoluteModeSettings.Display.X = x;
@@ -119,6 +121,9 @@ namespace OpenTabletDriver.Console
 
         private static async Task MapToDisplayIndex(string tablet, uint index)
         {
+            if (DesktopInterop.VirtualScreen == null)
+                throw new InvalidOperationException($"Could not look up {nameof(DesktopInterop.VirtualScreen)}");
+
             var displays = DesktopInterop.VirtualScreen.Displays.ToArray();
 
             ArgumentOutOfRangeException.ThrowIfGreaterThan(index, (uint)displays.Length);
@@ -130,8 +135,8 @@ namespace OpenTabletDriver.Console
 
             // account for monitor layouts with negative offsets (e.g. Wayland supports this)
             // skip IVirtualScreen's as these tend to be normalized to 0,0, which may confuse these methods
-            float xOffset = displays.Where(d => d is not IVirtualScreen).MinBy(d => d.Position.X).Position.X;
-            float yOffset = displays.Where(d => d is not IVirtualScreen).MinBy(d => d.Position.Y).Position.Y;
+            float xOffset = displays.Where(d => d is not IVirtualScreen).MinBy(d => d.Position.X)?.Position.X ?? 0;
+            float yOffset = displays.Where(d => d is not IVirtualScreen).MinBy(d => d.Position.Y)?.Position.Y ?? 0;
 
             float x, y;
 
@@ -154,6 +159,9 @@ namespace OpenTabletDriver.Console
         {
             await ModifyProfile(tablet, p =>
             {
+                if (p.AbsoluteModeSettings == null)
+                    throw new InvalidOperationException($"Could not find {nameof(p.AbsoluteModeSettings)} in profile");
+
                 p.AbsoluteModeSettings.Tablet.Width = width;
                 p.AbsoluteModeSettings.Tablet.Height = height;
                 p.AbsoluteModeSettings.Tablet.X = x;
@@ -166,6 +174,9 @@ namespace OpenTabletDriver.Console
         {
             await ModifyProfile(tablet, p =>
             {
+                if (p.RelativeModeSettings == null)
+                    throw new InvalidOperationException($"Could not find {nameof(p.RelativeModeSettings)} in profile");
+
                 p.RelativeModeSettings.XSensitivity = xSens;
                 p.RelativeModeSettings.YSensitivity = ySens;
                 p.RelativeModeSettings.RelativeRotation = rotation;
@@ -174,14 +185,20 @@ namespace OpenTabletDriver.Console
 
         private static async Task SetResetTime(string tablet, int ms)
         {
-            await ModifyProfile(tablet, p => p.RelativeModeSettings.ResetTime = TimeSpan.FromMilliseconds(ms));
+            await ModifyProfile(tablet, p =>
+            {
+                if (p.RelativeModeSettings == null)
+                    throw new InvalidOperationException($"Could not find {nameof(p.RelativeModeSettings)} in profile");
+
+                p.RelativeModeSettings.ResetTime = TimeSpan.FromMilliseconds(ms);
+            });
         }
 
         private static async Task SetTipBinding(string tablet, string name, float threshold)
         {
             await ModifyProfile(tablet, p =>
             {
-                var tipBinding = AppInfo.PluginManager.ConstructObject<IBinding>(name);
+                var tipBinding = AppInfo.PluginManager.ConstructObject<IBinding>(name) ?? throw new InvalidOperationException($"Could not construct binding with name {name}");
 
                 p.BindingSettings.TipButton = new PluginSettingStore(tipBinding);
                 p.BindingSettings.TipActivationThreshold = threshold;
@@ -192,7 +209,7 @@ namespace OpenTabletDriver.Console
         {
             await ModifyProfile(tablet, p =>
             {
-                var binding = AppInfo.PluginManager.ConstructObject<IBinding>(name);
+                var binding = AppInfo.PluginManager.ConstructObject<IBinding>(name) ?? throw new InvalidOperationException($"Could not construct binding with name {name}");
 
                 p.BindingSettings.PenButtons[index] = new PluginSettingStore(binding);
             });
@@ -202,7 +219,7 @@ namespace OpenTabletDriver.Console
         {
             await ModifyProfile(tablet, p =>
             {
-                var binding = AppInfo.PluginManager.ConstructObject<IBinding>(name);
+                var binding = AppInfo.PluginManager.ConstructObject<IBinding>(name) ?? throw new InvalidOperationException($"Could not construct binding with name {name}");
 
                 p.BindingSettings.AuxButtons[index] = new PluginSettingStore(binding);
             });
@@ -210,17 +227,35 @@ namespace OpenTabletDriver.Console
 
         private static async Task SetEnableClipping(string tablet, bool isEnabled)
         {
-            await ModifyProfile(tablet, p => p.AbsoluteModeSettings.EnableClipping = isEnabled);
+            await ModifyProfile(tablet, p =>
+            {
+                if (p.AbsoluteModeSettings == null)
+                    throw new InvalidOperationException($"Could not find {nameof(p.AbsoluteModeSettings)} in profile");
+
+                p.AbsoluteModeSettings.EnableClipping = isEnabled;
+            });
         }
 
         private static async Task SetEnableAreaLimiting(string tablet, bool isEnabled)
         {
-            await ModifyProfile(tablet, p => p.AbsoluteModeSettings.EnableAreaLimiting = isEnabled);
+            await ModifyProfile(tablet, p =>
+            {
+                if (p.AbsoluteModeSettings == null)
+                    throw new InvalidOperationException($"Could not find {nameof(p.AbsoluteModeSettings)} in profile");
+
+                p.AbsoluteModeSettings.EnableAreaLimiting = isEnabled;
+            });
         }
 
         private static async Task SetLockAspectRatio(string tablet, bool isEnabled)
         {
-            await ModifyProfile(tablet, p => p.AbsoluteModeSettings.LockAspectRatio = isEnabled);
+            await ModifyProfile(tablet, p =>
+            {
+                if (p.AbsoluteModeSettings == null)
+                    throw new InvalidOperationException($"Could not find {nameof(p.AbsoluteModeSettings)} in profile");
+
+                p.AbsoluteModeSettings.LockAspectRatio = isEnabled;
+            });
         }
 
         private static async Task SetOutputMode(string tablet, string path)
@@ -264,7 +299,7 @@ namespace OpenTabletDriver.Console
             await ModifyProfile(tablet, s =>
             {
                 foreach (var filterToReset in filtersToReset)
-                    s.Filters = new PluginSettingStoreCollection(s.Filters.Where(filter => filter.Path != filterToReset));
+                    s.Filters = new PluginSettingStoreCollection(s.Filters.Where(filter => filter?.Path != filterToReset)!);
                 AppendPluginStoreSettingsCollectionByPaths<IPositionedPipelineElement<IDeviceReport>>(s.Filters, filtersToReset);
             });
         }
@@ -276,7 +311,7 @@ namespace OpenTabletDriver.Console
         private static async Task GetCurrentLog()
         {
             if (!await EnsureDaemonReady()) return;
-            var log = await Driver.Instance.GetCurrentLog();
+            var log = await Driver.Instance!.GetCurrentLog();
             foreach (var message in log)
                 await Out.WriteLineAsync(Log.GetStringFormat(message));
         }
@@ -304,6 +339,10 @@ namespace OpenTabletDriver.Console
         private static async Task GetAreas(string tablet)
         {
             var profile = await GetProfile(tablet);
+
+            if (profile.AbsoluteModeSettings == null)
+                throw new InvalidOperationException($"Could not find {nameof(profile.AbsoluteModeSettings)} in profile");
+
             await Out.WriteLineAsync($"Display area: {profile.AbsoluteModeSettings.Display.Area}");
             await Out.WriteLineAsync($"Tablet area: {profile.AbsoluteModeSettings.Tablet.Area}");
         }
@@ -311,6 +350,10 @@ namespace OpenTabletDriver.Console
         private static async Task GetSensitivity(string tablet)
         {
             var profile = await GetProfile(tablet);
+
+            if (profile.RelativeModeSettings == null)
+                throw new InvalidOperationException($"Could not find {nameof(profile.RelativeModeSettings)} in profile");
+
             await Out.WriteLineAsync($"Horizontal Sensitivity: {profile.RelativeModeSettings.XSensitivity}px/mm");
             await Out.WriteLineAsync($"Vertical Sensitivity: {profile.RelativeModeSettings.YSensitivity}px/mm");
             await Out.WriteLineAsync($"Relative mode rotation: {profile.RelativeModeSettings.RelativeRotation}°");
@@ -323,11 +366,16 @@ namespace OpenTabletDriver.Console
             await Out.WriteLineAsync($"Tip Binding: {profile.BindingSettings.TipButton.Format() ?? "None"}@{profile.BindingSettings.TipActivationThreshold}%");
             await Out.WriteLineAsync($"Pen Bindings: {string.Join(", ", profile.BindingSettings.PenButtons.Format())}");
             await Out.WriteLineAsync($"Express Key Bindings: {string.Join(", ", profile.BindingSettings.AuxButtons.Format())}");
+            await Out.WriteLineAsync($"Wheel Bindings:\n{string.Join("\n", profile.BindingSettings.WheelBindings.Format())}");
         }
 
         private static async Task GetMiscSettings(string tablet)
         {
             var profile = await GetProfile(tablet);
+
+            if (profile.AbsoluteModeSettings == null)
+                throw new InvalidOperationException($"Could not find {nameof(profile.AbsoluteModeSettings)} in profile");
+
             await Out.WriteLineAsync($"Area clipping: {profile.AbsoluteModeSettings.EnableClipping}");
             await Out.WriteLineAsync($"Tablet area limiting: {profile.AbsoluteModeSettings.EnableAreaLimiting}");
             await Out.WriteLineAsync($"Lock aspect ratio: {profile.AbsoluteModeSettings.LockAspectRatio}");
@@ -358,14 +406,14 @@ namespace OpenTabletDriver.Console
         private static async Task Detect()
         {
             if (!await EnsureDaemonReady()) return;
-            await Driver.Instance.DetectTablets();
-            await Driver.Instance.SetSettings(await Driver.Instance.GetSettings());
+            await Driver.Instance!.DetectTablets();
+            await Driver.Instance!.SetSettings(await Driver.Instance.GetSettings());
         }
 
         private static async Task InstallPlugin(string filePath)
         {
             if (!await EnsureDaemonReady()) return;
-            if (!await Driver.Instance.InstallPlugin(filePath))
+            if (!await Driver.Instance!.InstallPlugin(filePath))
                 await Out.WriteLineAsync("Unable to install plugin");
         }
 
@@ -373,7 +421,7 @@ namespace OpenTabletDriver.Console
         {
             if (!await EnsureDaemonReady()) return;
             var context = AppInfo.PluginManager.GetLoadedPlugins().First(x => x.Directory.Name == folderName);
-            await Driver.Instance.UninstallPlugin(context.Directory.FullName);
+            await Driver.Instance!.UninstallPlugin(context.Directory.FullName);
         }
 
         #endregion
@@ -383,7 +431,7 @@ namespace OpenTabletDriver.Console
         private static async Task GetString(int vid, int pid, int index)
         {
             if (!await EnsureDaemonReady()) return;
-            var str = await Driver.Instance.RequestDeviceString(vid, pid, index);
+            var str = await Driver.Instance!.RequestDeviceString(vid, pid, index);
             await Out.WriteLineAsync(str);
         }
 
@@ -429,6 +477,9 @@ namespace OpenTabletDriver.Console
         // BUG: DesktopInterop takes the CLI's view of the display layout - this may be desynched
         private static async Task ListDisplays()
         {
+            if (DesktopInterop.VirtualScreen == null)
+                throw new InvalidOperationException($"Unable to look up {nameof(DesktopInterop.VirtualScreen)}");
+
             int index = 0;
             foreach (var display in DesktopInterop.VirtualScreen.Displays)
                 await Out.WriteLineAsync($"{index++}: {display}");
@@ -446,7 +497,7 @@ namespace OpenTabletDriver.Console
 
         private static async Task EditSettings()
         {
-            string editor = Environment.GetEnvironmentVariable("EDITOR");
+            string? editor = Environment.GetEnvironmentVariable("EDITOR");
             if (!string.IsNullOrWhiteSpace(editor))
             {
                 var settings = await GetSettings();
@@ -475,7 +526,8 @@ namespace OpenTabletDriver.Console
                 var newHash = GetSHA256(path);
 
                 await using (var fs = File.OpenRead(path))
-                    settings = Serialization.Deserialize<Settings>(fs);
+                    settings = Serialization.Deserialize<Settings>(fs)
+                        ?? throw new InvalidOperationException($"Unable to deserialize settings: {path}");
 
                 if (oldHash.Equals(newHash))
                 {
@@ -500,7 +552,7 @@ namespace OpenTabletDriver.Console
             if (!await EnsureDaemonReady()) return;
             try
             {
-                var diagnostics = await Driver.Instance.GetDiagnosticInfo();
+                var diagnostics = await Driver.Instance!.GetDiagnosticInfo();
                 await Out.WriteLineAsync(diagnostics.ToString());
             }
             catch (Exception ex)

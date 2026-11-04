@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using HidSharp.Reports;
-using OpenTabletDriver.Devices.HidSharpBackend;
 using OpenTabletDriver.Native.Windows;
 using OpenTabletDriver.Native.Windows.USB;
 using OpenTabletDriver.Plugin.Devices;
@@ -33,10 +32,17 @@ namespace OpenTabletDriver.Devices.WinUSB
                 if (!WinUsb_ControlTransfer(winUsbHandle, packet, descriptorPtr, (uint)sizeof(DeviceDescriptor), out _, null))
                     throw new IOException("Failed to retrieve device descriptor");
 
-                if (deviceDescriptor.idVendor == 0x2833)
+                switch (deviceDescriptor.idVendor)
                 {
-                    throw new IOException(
-                        "skipping device with idVendor 0x2833 (Meta/Facebook/Oculus) due to known issues with Quest headsets");
+                    case 0x45E:
+                        throw new IOException(
+                            "skipping device with idVendor 0x45E (Microsoft) due to known issues with Windows SDK");
+                    case 0x05AC:
+                        throw new IOException(
+                            "skipping device with idVendor 0x2833 (Meta/Facebook/Oculus) due to known issues with Quest headsets");
+                    case 0x18D1:
+                        throw new IOException(
+                            "skipping device with idVendor 0x18D1 (Google) due to known issues with android bootloaders in fastboot mode");
                 }
 
                 var interfaceDescriptor = new InterfaceDescriptor();
@@ -97,7 +103,7 @@ namespace OpenTabletDriver.Devices.WinUSB
                         256
                     );
 
-                    if (!WinUsb_ControlTransfer(winUsbHandle!, reportDescriptorPacket, reportDescriptorPtr, 256, out var lengthTransferred, null))
+                    if (!WinUsb_ControlTransfer(winUsbHandle, reportDescriptorPacket, reportDescriptorPtr, 256, out var lengthTransferred, null))
                         throw new IOException("Failed to retrieve report descriptor");
 
                     _reportDescriptor = new byte[lengthTransferred];
@@ -118,9 +124,9 @@ namespace OpenTabletDriver.Devices.WinUSB
         }
 
         private int referenceCount;
-        private SafeFileHandle activeFileHandle;
-        private SafeWinUsbInterfaceHandle activeWinUsbHandle;
-        private byte[] _reportDescriptor;
+        private SafeFileHandle? activeFileHandle;
+        private SafeWinUsbInterfaceHandle? activeWinUsbHandle;
+        private byte[] _reportDescriptor = null!;
 
         internal int InterfaceNum { get; private set; }
         internal byte? InputPipe { get; private set; }
@@ -136,13 +142,13 @@ namespace OpenTabletDriver.Devices.WinUSB
 
         public int FeatureReportLength { private set; get; }
 
-        public string Manufacturer { get; private set; }
+        public string? Manufacturer { get; private set; }
 
-        public string ProductName { get; private set; }
+        public string? ProductName { get; private set; }
 
-        public string FriendlyName => ProductName;
+        public string? FriendlyName => ProductName;
 
-        public string SerialNumber { get; private set; }
+        public string? SerialNumber { get; private set; }
 
         public string DevicePath { get; }
 
@@ -150,7 +156,7 @@ namespace OpenTabletDriver.Devices.WinUSB
 
         public IDictionary<string, string> DeviceAttributes => GetDeviceAttributes();
 
-        public unsafe string GetDeviceString(byte index)
+        public unsafe string? GetDeviceString(byte index)
         {
             return WithHandle(winUsbHandle =>
             {
@@ -170,6 +176,9 @@ namespace OpenTabletDriver.Devices.WinUSB
                 }
             });
         }
+
+        public void OpenAndSendFeatureInit(byte[] initData) => Open().SetFeature(initData);
+        public void OpenAndSendOutputInit(byte[] initData) => Open().Write(initData);
 
         public IDeviceEndpointStream Open()
         {
@@ -222,7 +231,7 @@ namespace OpenTabletDriver.Devices.WinUSB
                     throw new IOException("Failed to initialize WinUSB interface");
             }
 
-            return activeWinUsbHandle;
+            return activeWinUsbHandle!;
         }
 
         // Take reference, so we may easily add multiple interface support in the future
@@ -234,7 +243,7 @@ namespace OpenTabletDriver.Devices.WinUSB
             if (Interlocked.Decrement(ref referenceCount) == 0)
             {
                 activeWinUsbHandle.Dispose();
-                activeFileHandle.Dispose();
+                activeFileHandle?.Dispose();
 
                 activeWinUsbHandle = null;
                 activeFileHandle = null;

@@ -10,7 +10,8 @@ namespace OpenTabletDriver.UX.Windows.Plugins
     {
         public PluginDropPanel()
         {
-            AllowDrop = true;
+            // TODO on Eto dependency bump: Check if Linux works
+            AllowDrop = !OperatingSystem.IsLinux();
 
             DropContent = new StackLayout
             {
@@ -30,10 +31,10 @@ namespace OpenTabletDriver.UX.Windows.Plugins
         private const string DRAG_DROP_SUPPORTED = "Drop plugin here...";
         private const string DRAG_DROP_UNSUPPORTED = "Drag and drop is not supported on this platform.";
 
-        public event Func<string, Task> RequestPluginInstall;
+        public event Func<string, Task>? RequestPluginInstall;
 
-        private Control content;
-        public new Control Content
+        private Control? content;
+        public new Control? Content
         {
             set
             {
@@ -65,9 +66,9 @@ namespace OpenTabletDriver.UX.Windows.Plugins
                 {
                     // Skip if running on bugged platform
                     // https://github.com/picoe/Eto/issues/1812
-                    if (args.Data.Uris != null && args.Data.Uris?.Length > 0)
+                    var uriList = args.Data.Uris;
+                    if (uriList != null && uriList.Length > 0)
                     {
-                        var uriList = args.Data.Uris;
                         var supportedType = uriList.All(uri =>
                         {
                             if (uri.IsFile && File.Exists(uri.LocalPath))
@@ -108,17 +109,12 @@ namespace OpenTabletDriver.UX.Windows.Plugins
             base.OnDragDrop(args);
             try
             {
-                if (args.Data.ContainsUris && args.Data.Uris != null && args.Data.Uris.Length > 0)
-                {
-                    var uriList = args.Data.Uris;
-                    foreach (var uri in uriList)
-                    {
-                        if (uri.IsFile && File.Exists(uri.LocalPath))
-                        {
-                            await RequestPluginInstall?.Invoke(uri.LocalPath);
-                        }
-                    }
-                }
+                if (!args.Data.ContainsUris || args.Data.Uris is not { Length: > 0 }) return;
+
+                foreach (var uri in args.Data.Uris)
+                    if (uri.IsFile && File.Exists(uri.LocalPath))
+                        if (RequestPluginInstall != null)
+                            await RequestPluginInstall.Invoke(uri.LocalPath);
             }
             catch (Exception ex)
             {

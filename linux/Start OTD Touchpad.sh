@@ -8,12 +8,13 @@ if (( EUID == 0 )); then
 fi
 # A source download contains launch scripts, but no executable in linux/.
 if [[ ! -x "$folder/OpenTabletDriver.UX.Gtk" ]]; then
-    output=${OTD_LINUX_OUTPUT:-"$folder/../artifacts/OTD-Touchpad-Linux-x64-v0.0.3"}
+    if [[ ! -f "$folder/build-linux.sh" ]]; then
+        printf 'Incomplete portable release: OpenTabletDriver.UX.Gtk is missing. Extract the complete binary archive.\n' >&2
+        exit 1
+    fi
+    version=$(sed -n 's/.*<VersionBase>\(.*\)<\/VersionBase>.*/\1/p' "$folder/../upstream/Directory.Build.props")
+    output=${OTD_LINUX_OUTPUT:-"$folder/../artifacts/OTD-Touchpad-Linux-${OTD_ARCHITECTURE:-x64}-v$version"}
     if [[ ! -x "$output/OpenTabletDriver.UX.Gtk" ]]; then
-        if [[ ! -f "$folder/build-linux.sh" ]]; then
-            printf 'Incomplete portable release: OpenTabletDriver.UX.Gtk is missing. Extract the complete binary archive.\n' >&2
-            exit 1
-        fi
         if ! command -v "${OTD_DOTNET:-dotnet}" >/dev/null; then
             printf 'This is a source download and has not been built.\n' >&2
             otd_dependency_hint >&2

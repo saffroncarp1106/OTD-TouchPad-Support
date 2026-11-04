@@ -14,11 +14,11 @@ namespace OpenTabletDriver.Plugin.Output
         }
 
         private bool passthrough;
-        private TabletReference tablet;
-        private IList<IPositionedPipelineElement<IDeviceReport>> elements;
-        private IPipelineElement<IDeviceReport> entryElement;
+        private TabletReference? tablet;
+        private IList<IPositionedPipelineElement<IDeviceReport>> elements = [];
+        private IPipelineElement<IDeviceReport>? entryElement;
 
-        public event Action<IDeviceReport> Emit;
+        public event Action<IDeviceReport?>? Emit;
 
         protected bool Passthrough
         {
@@ -41,6 +41,8 @@ namespace OpenTabletDriver.Plugin.Output
             get => this.passthrough;
         }
 
+        protected IList<IPositionedPipelineElement<IDeviceReport>> InternalElements { private set; get; } =
+            Array.Empty<IPositionedPipelineElement<IDeviceReport>>();
         protected IList<IPositionedPipelineElement<IDeviceReport>> PreTransformElements { private set; get; } =
             Array.Empty<IPositionedPipelineElement<IDeviceReport>>();
 
@@ -50,6 +52,8 @@ namespace OpenTabletDriver.Plugin.Output
         public bool DisablePressure { set; get; }
 
         public bool DisableTilt { set; get; }
+
+        public bool DisableRotation { set; get; }
 
         public Matrix3x2 TransformationMatrix { protected set; get; }
 
@@ -62,8 +66,9 @@ namespace OpenTabletDriver.Plugin.Output
                 Passthrough = false;
                 DestroyInternalLinks();
 
-                if (Elements != null && Elements.Count > 0)
+                if (elements.Count > 0)
                 {
+                    InternalElements = GroupElements(Elements, PipelinePosition.Internal);
                     PreTransformElements = GroupElements(Elements, PipelinePosition.PreTransform);
                     PostTransformElements = GroupElements(Elements, PipelinePosition.PostTransform);
 
@@ -78,6 +83,7 @@ namespace OpenTabletDriver.Plugin.Output
                 else
                 {
                     Passthrough = true;
+                    InternalElements = Array.Empty<IPositionedPipelineElement<IDeviceReport>>();
                     PreTransformElements = Array.Empty<IPositionedPipelineElement<IDeviceReport>>();
                     PostTransformElements = Array.Empty<IPositionedPipelineElement<IDeviceReport>>();
                 }
@@ -91,6 +97,7 @@ namespace OpenTabletDriver.Plugin.Output
             {
                 var links = new List<IPipelineElement<IDeviceReport>>();
 
+                links.AddRange(InternalElements);
                 links.AddRange(PreTransformElements);
                 links.Add(this);
                 links.AddRange(PostTransformElements);
@@ -99,7 +106,7 @@ namespace OpenTabletDriver.Plugin.Output
             }
         }
 
-        public virtual TabletReference Tablet
+        public virtual TabletReference? Tablet
         {
             set
             {
@@ -109,10 +116,11 @@ namespace OpenTabletDriver.Plugin.Output
             get => this.tablet;
         }
 
-        public virtual void Consume(IDeviceReport report)
+        public virtual void Consume(IDeviceReport? report)
         {
             if (report is IAbsolutePositionReport tabletReport)
                 report = Transform(tabletReport);
+
             if (report != null)
                 Emit?.Invoke(report);
         }
@@ -120,7 +128,7 @@ namespace OpenTabletDriver.Plugin.Output
         public virtual void Read(IDeviceReport deviceReport) => entryElement?.Consume(deviceReport);
 
         protected abstract Matrix3x2 CreateTransformationMatrix();
-        protected abstract IAbsolutePositionReport Transform(IAbsolutePositionReport tabletReport);
+        protected abstract IAbsolutePositionReport? Transform(IAbsolutePositionReport tabletReport);
         protected abstract void OnOutput(IDeviceReport report);
 
         private void DestroyInternalLinks()
@@ -148,7 +156,7 @@ namespace OpenTabletDriver.Plugin.Output
             {
                 entryElement = null;
 
-                foreach (var obj in Elements ?? [])
+                foreach (var obj in Elements)
                     if (obj is IDisposable disposable)
                         disposable.Dispose();
             }

@@ -14,7 +14,7 @@ namespace OpenTabletDriver.Desktop.Profiles
     {
         private float tP = 1, eP = 1;
 
-        private PluginSettingStore tipButton,
+        private PluginSettingStore? tipButton,
             eraserButton,
             mouseScrollUp,
             mouseScrollDown;
@@ -25,7 +25,7 @@ namespace OpenTabletDriver.Desktop.Profiles
 
         private List<WheelBindingSettings> wheelBindings = [];
 
-        private bool disablePressure, disableTilt, enableDragBindings;
+        private bool disablePressure, disableTilt, disableRotation, enableDragBindings;
 
         [JsonProperty(nameof(TipActivationThreshold))]
         public float TipActivationThreshold
@@ -35,7 +35,7 @@ namespace OpenTabletDriver.Desktop.Profiles
         }
 
         [JsonProperty(nameof(TipButton))]
-        public PluginSettingStore TipButton
+        public PluginSettingStore? TipButton
         {
             set => this.RaiseAndSetIfChanged(ref this.tipButton, value);
             get => this.tipButton;
@@ -49,7 +49,7 @@ namespace OpenTabletDriver.Desktop.Profiles
         }
 
         [JsonProperty(nameof(EraserButton))]
-        public PluginSettingStore EraserButton
+        public PluginSettingStore? EraserButton
         {
             set => this.RaiseAndSetIfChanged(ref this.eraserButton, value);
             get => this.eraserButton;
@@ -77,14 +77,14 @@ namespace OpenTabletDriver.Desktop.Profiles
         }
 
         [JsonProperty(nameof(MouseScrollUp))]
-        public PluginSettingStore MouseScrollUp
+        public PluginSettingStore? MouseScrollUp
         {
             set => this.RaiseAndSetIfChanged(ref this.mouseScrollUp, value);
             get => this.mouseScrollUp;
         }
 
         [JsonProperty(nameof(MouseScrollDown))]
-        public PluginSettingStore MouseScrollDown
+        public PluginSettingStore? MouseScrollDown
         {
             set => this.RaiseAndSetIfChanged(ref this.mouseScrollDown, value);
             get => this.mouseScrollDown;
@@ -109,6 +109,13 @@ namespace OpenTabletDriver.Desktop.Profiles
         {
             set => this.RaiseAndSetIfChanged(ref this.disableTilt, value);
             get => this.disableTilt;
+        }
+
+        [JsonProperty(nameof(DisableRotation))]
+        public bool DisableRotation
+        {
+            set => this.RaiseAndSetIfChanged(ref this.disableRotation, value);
+            get => this.disableRotation;
         }
 
         [JsonProperty(nameof(EnableDragBindings))]
@@ -144,7 +151,7 @@ namespace OpenTabletDriver.Desktop.Profiles
 
         public void MatchSpecifications(TabletSpecifications tabletSpecifications)
         {
-            int penButtonCount = (int?)tabletSpecifications.Pen?.ButtonCount ?? 0;
+            int penButtonCount = (int)tabletSpecifications.Pen.ButtonCount;
             int auxButtonCount = (int?)tabletSpecifications.AuxiliaryButtons?.ButtonCount ?? 0;
             int mouseButtonCount = (int?)tabletSpecifications.MouseButtons?.ButtonCount ?? 0;
 

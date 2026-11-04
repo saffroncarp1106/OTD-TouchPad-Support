@@ -1,36 +1,36 @@
-# OpenTabletDriver Touchpad — Linux x64 v0.0.3
+# OpenTabletDriver Touchpad — Linux V0.0.4
 
-Source build update. Added a build script in the main folder and clearer errors for missing files. Full Linux build still needs testing for v0.0.3.
+x64 and ARM64 builds based on OpenTabletDriver v0.6.8.1 and .NET 10. Both builds compile; runtime testing is still needed for this release.
 
 This experimental fork turns Linux touchpads into OTD devices for single-finger absolute positioning. It uses a native C# libevdev backend and the kernel's touchpad driver, independently of X11/Wayland. Python and an installed .NET runtime are not needed for the packaged app.
 
 ## Supported distributions
 
-The v0.0.2 portable binary is for x64 Linux. It was built and launched on CachyOS (Arch-based) with KDE Wayland. Debian/Ubuntu use is intended, but the v0.0.2 bundle has not been live-tested on those distributions; Linux Mint 22.3/X11 was tested with v0.0.1.
+Separate packages are provided for x64 and ARM64. Earlier x64 releases were tested on CachyOS/KDE Wayland and Linux Mint/X11; those results do not establish runtime compatibility for this updated release.
 
 ### Arch Linux / CachyOS
 
-v0.0.2 has been built and launched on CachyOS with KDE Wayland and an ASUS ASUE1209 touchpad. The portable release bundles .NET 8; no system .NET installation is needed to run it. Native desktop libraries are still required:
+v0.0.2 has been built and launched on CachyOS with KDE Wayland and an ASUS ASUE1209 touchpad. The current portable release bundles .NET 10; no system .NET installation is needed to run it. Native desktop libraries are still required:
 
 ```bash
 sudo pacman -S --needed libevdev gtk3 icu libusb
 ```
 
 Arch package reference: https://archlinux.org/packages/extra/x86_64/gtk3/
-.NET SDK reference: https://archlinux.org/packages/extra/x86_64/dotnet-sdk-8.0/
+.NET SDK reference: https://archlinux.org/packages/extra/x86_64/dotnet-sdk/
 
 ### Binary release versus source download
 
-Run `bash linux/build-linux.sh` from the repository root to create the portable release folder and `artifacts/OTD.v0.0.3.Linux.tar.gz`. Extract the archive to run the release. Its launcher and `OpenTabletDriver.UX.Gtk` executable are in the same directory.
+Run `bash linux/build-linux.sh` from the repository root to create the portable release folder and `artifacts/OTD-Touchpad-v0.6.8.1-linux-x64.tar.gz`. Extract the archive to run the release. Its launcher and `OpenTabletDriver.UX.Gtk` executable are in the same directory.
 
 Extract the whole source ZIP. Keep linux/ and upstream/ together, then open a terminal in the folder containing them. To build:
 
 ```bash
-sudo pacman -S --needed dotnet-sdk-8.0
+sudo pacman -S --needed dotnet-sdk
 bash build-linux.sh --check-source
 bash build-linux.sh
-bash "artifacts/OTD-Touchpad-Linux-x64-v0.0.3/Prepare Linux.sh"
-bash "artifacts/OTD-Touchpad-Linux-x64-v0.0.3/Start OTD Touchpad.sh"
+bash "artifacts/OTD-Touchpad-Linux-x64-v0.6.8.1/Prepare Linux.sh"
+bash "artifacts/OTD-Touchpad-Linux-x64-v0.6.8.1/Start OTD Touchpad.sh"
 ```
 
 The source-tree launcher forwards to this build output and builds it when an SDK is available. If an SDK is missing, it explains how to build or obtain the binary release before requesting administrator access. Builds use a new output directory and stop if it already exists, which keeps prior settings and logs out of a fresh release. `OTD_DOTNET` selects an SDK executable; `OTD_LINUX_OUTPUT` selects a custom build/launch output directory. Use a new absolute path for this override.
@@ -39,7 +39,7 @@ The source-tree launcher forwards to this build output and builds it when an SDK
 
 Install `libevdev2`, `libgtk-3-0`, `libusb-1.0-0`, and your distribution's ICU runtime package. The standard desktop udev and logind services are also required.
 
-The release is v0.0.3; the upstream OTD assembly version remains `0.6.7-touchpad-linux.3` to preserve upstream versioning.
+The release is V0.0.4; the upstream OTD assembly version is `0.6.8.1-touchpad`. Set `OTD_ARCHITECTURE=arm64` when building for ARM64. Source build output names use the upstream OTD version.
 
 ## Start
 
@@ -78,7 +78,7 @@ The development logger `linux/live_touchpad.py` is separate. Its captures are ke
 
 Source is available in this repository. Linux additions are in `upstream/OpenTabletDriver/Devices/LinuxTouchpad`; detection wiring is in `Driver.cs`, output ownership in `OpenTabletDriver.Desktop/Output/AbsoluteMode.cs`, and Linux app worker lifetime in `OpenTabletDriver.UX/DaemonWatchdog.cs` and `App.cs`.
 
-From the repository root, `bash linux/build-linux.sh` publishes self-contained linux-x64 GTK, daemon, and console apps and creates the portable archive using an installed .NET 8 SDK. Set `OTD_DOTNET` to a specific SDK executable if needed; `OTD_LINUX_OUTPUT` and `OTD_LINUX_ARCHIVE` select output paths.
+From the repository root, `bash linux/build-linux.sh` publishes self-contained linux-x64 GTK, daemon, and console apps and creates the portable archive using an installed .NET 10 SDK. Set `OTD_DOTNET` to a specific SDK executable if needed; `OTD_LINUX_OUTPUT` and `OTD_LINUX_ARCHIVE` select output paths.
 
 Tests are in `tests/LinuxTouchpad`. They verify normalization, dimensions, corner mapping, contact-ID changes, lift, multi-contact/palm filtering, incomplete contacts, ownership lifetime, and native ABI. Pass the supplied capture path to replay real raw positions against their independently logged normalized values. `--integration` tests real kernel uinput/evdev with a synthetic touchpad, without generating pointer movement. `--inventory` prints dynamic OTD touchpad configurations.
 

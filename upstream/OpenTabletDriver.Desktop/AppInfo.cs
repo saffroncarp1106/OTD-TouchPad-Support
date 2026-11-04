@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using OpenTabletDriver.Desktop.Reflection;
 using OpenTabletDriver.Interop;
 using OpenTabletDriver.Plugin;
@@ -12,25 +14,52 @@ namespace OpenTabletDriver.Desktop
 
     public class AppInfo
     {
-        private string configurationDirectory, settingsFile, pluginDirectory, presetDirectory, logDirectory, temporaryDirectory, cacheDirectory, backupDirectory, trashDirectory;
+        /// <summary>
+        ///   The version of the currently executing assembly
+        /// </summary>
+        /// <remarks>
+        ///   This value is set at compile time, it will differ depending on whether the Daemon, the UX or some other code is using this field.
+        ///   You should rely on <see cref="Version"/> instead.
+        /// </remarks>
+        private readonly static Version assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version!;
+
+        private string? configurationDirectory,
+            settingsFile,
+            pluginDirectory,
+            presetDirectory,
+            logDirectory,
+            temporaryDirectory,
+            cacheDirectory,
+            backupDirectory,
+            trashDirectory,
+            recordingDirectory;
+
         public AppInfo()
         {
+            // on Linux, verify presence of necessary environment variables (as '~' expands to $HOME environment variable)
             if (SystemInterop.CurrentPlatform == PluginPlatform.Linux && IsEnvVarUnset("HOME") && IsEnvVarUnset("XDG_DATA_HOME"))
             {
-                Log.Write(nameof(AppInfo), "Unable to look up environment variable 'HOME' or 'XDG_DATA_HOME'. '~/.local/share/OpenTabletDriver' paths will not detect (such as configuration overrides).", LogLevel.Warning);
+                Log.Write(nameof(AppInfo),
+                    "Unable to look up environment variable 'HOME' or 'XDG_DATA_HOME'. '~/.local/share/OpenTabletDriver' paths will not detect (such as configuration overrides).",
+                    LogLevel.Warning);
             }
         }
 
-        private static AppInfo current;
-        public static AppInfo Current { set => current = value; get => current ??= SystemInterop.CurrentPlatform switch
+        private static AppInfo? current;
+
+        public static AppInfo Current
+        {
+            set => current = value;
+            get => current ??= SystemInterop.CurrentPlatform switch
             {
                 PluginPlatform.Windows => new AppInfo
                 {
-                    AppDataDirectory = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name == "OTD-Touchpad-Experimental" ? Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OTD-Touchpad-Experimental") : GetExistingPathOrLast(Path.Join(ProgramDirectory, "userdata"), "$LOCALAPPDATA\\OpenTabletDriver")
+                    AppDataDirectory = Assembly.GetEntryAssembly()?.GetName().Name == "OTD-Touchpad-Experimental"
+                        ? Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OTD-Touchpad-Experimental")
+                        : GetExistingPathOrLast(Path.Join(ProgramDirectory, "userdata"), "$LOCALAPPDATA\\OpenTabletDriver"),
                 },
                 PluginPlatform.Linux => new AppInfo
                 {
-                    ConfigurationDirectory = GetExistingPath(Path.Join(UnixXdgPath.DataHome, "OpenTabletDriver/Configurations")),
                     AppDataDirectory = GetExistingPathOrLast(Path.Join(ProgramDirectory, "userdata"), Path.Join(UnixXdgPath.ConfigHome, "OpenTabletDriver")),
                     TemporaryDirectory = GetPath(Path.Join(UnixXdgPath.RuntimeDir, "OpenTabletDriver")),
                     CacheDirectory = GetPath(Path.Join(UnixXdgPath.CacheHome, "OpenTabletDriver")),
@@ -39,25 +68,129 @@ namespace OpenTabletDriver.Desktop
                 {
                     AppDataDirectory = GetExistingPathOrLast(Path.Join(ProgramDirectory, "userdata"), "~/Library/Application Support/OpenTabletDriver"),
                     TemporaryDirectory = GetPath("$TMPDIR/OpenTabletDriver"),
-                    CacheDirectory = GetPath("~/Library/Caches/OpenTabletDriver")
+                    CacheDirectory = GetPath("~/Library/Caches/OpenTabletDriver"),
                 },
                 _ => throw new InvalidOperationException($"Unsupported platform {SystemInterop.CurrentPlatform}"),
-            }; }
+            };
+        }
+
         public static DesktopPluginManager PluginManager { set; get; } = new DesktopPluginManager();
+
         public static PresetManager PresetManager { set; get; } = new PresetManager();
-        public required string AppDataDirectory { set; get; }
-        public string ConfigurationDirectory { set => this.configurationDirectory = value; get => this.configurationDirectory ?? GetDefaultConfigurationDirectory(); }
-        public string SettingsFile { set => this.settingsFile = value; get => this.settingsFile ?? GetDefaultSettingsFile(); }
-        public string PluginDirectory { set => this.pluginDirectory = value; get => this.pluginDirectory ?? GetDefaultPluginDirectory(); }
-        public string PresetDirectory { set => this.presetDirectory = value; get => this.presetDirectory ?? GetDefaultPresetDirectory(); }
-        public string LogDirectory { set => this.logDirectory = value; get => this.logDirectory ?? GetDefaultLogDirectory(); }
-        public string TemporaryDirectory { set => this.temporaryDirectory = value; get => this.temporaryDirectory ?? GetDefaultTemporaryDirectory(); }
-        public string CacheDirectory { set => this.cacheDirectory = value; get => this.cacheDirectory ?? GetDefaultCacheDirectory(); }
-        public string BackupDirectory { set => this.backupDirectory = value; get => this.backupDirectory ?? GetDefaultBackupDirectory(); }
-        public string TrashDirectory { set => this.trashDirectory = value; get => this.trashDirectory ?? GetDefaultTrashDirectory(); }
+
+        public Version Version { set; get; } = assemblyVersion;
+
+        public string? CommandLineAppDataDirectory
+        {
+            set
+            {
+                field = value;
+                if (value != null)
+                    this.AppDataDirectory = value;
+            }
+            get;
+        }
+
+        public string? CommandLineConfigurationDirectory
+        {
+            set
+            {
+                field = value;
+                if (value != null)
+                    this.ConfigurationDirectory = value;
+            }
+            get;
+        }
+
+        public required string AppDataDirectory { set; get; } // Is handled by the daemon
+
+        [AllowNull]
+        public string ConfigurationDirectory
+        {
+            set => this.configurationDirectory = value; // Optional, and would get confusing when debugging user reported issues
+            get => this.configurationDirectory ??= GetDefaultConfigurationDirectory();
+        }
+
+        [AllowNull]
+        public string SettingsFile
+        {
+            set => this.settingsFile = value; // Generated on save
+            get => this.settingsFile ??= GetDefaultSettingsFile();
+        }
+
+        [AllowNull]
+        public string PluginDirectory
+        {
+            set => EnsureDirectoryExists(this.pluginDirectory = value);
+            get => this.pluginDirectory ??= EnsureDirectoryExists(GetDefaultPluginDirectory());
+        }
+
+        [AllowNull]
+        public string PresetDirectory
+        {
+            set => EnsureDirectoryExists(this.presetDirectory = value);
+            get => this.presetDirectory ??= EnsureDirectoryExists(GetDefaultPresetDirectory());
+        }
+
+        [AllowNull]
+        public string LogDirectory
+        {
+            set => EnsureDirectoryExists(this.logDirectory = value);
+            get => this.logDirectory ??= EnsureDirectoryExists(GetDefaultLogDirectory());
+        }
+
+        [AllowNull]
+        public string TemporaryDirectory
+        {
+            set => this.temporaryDirectory = value; // Existence is optional as it gets deleted in LoadUserSettings()
+            get => this.temporaryDirectory ??= GetDefaultTemporaryDirectory();
+        }
+
+        [AllowNull]
+        public string CacheDirectory
+        {
+            set => this.cacheDirectory = value; // Gets created when fetching metadata
+            get => this.cacheDirectory ??= GetDefaultCacheDirectory();
+        }
+
+        [AllowNull]
+        public string BackupDirectory
+        {
+            set => this.backupDirectory = value; // Gets created by the unused updater
+            get => this.backupDirectory ??= GetDefaultBackupDirectory();
+        }
+
+        [AllowNull]
+        public string TrashDirectory
+        {
+            set => this.trashDirectory = value; // Existence is optional as it gets deleted in LoadUserSettings()
+            get => this.trashDirectory ??= GetDefaultTrashDirectory();
+        }
+
+        [AllowNull]
+        public string RecordingDirectory
+        {
+            set => this.recordingDirectory = value; // This directory will be created by the UX
+            get => this.recordingDirectory ??= GetDefaultRecordingDirectory();
+        }
+
         public static string ProgramDirectory => AppContext.BaseDirectory;
 
-        private string GetDefaultConfigurationDirectory() => GetExistingPathOrLast(Path.Join(AppDataDirectory, "Configurations"), Path.Join(ProgramDirectory, "Configurations"), Path.Join(Environment.CurrentDirectory, "Configurations"));
+        private string GetDefaultConfigurationDirectory()
+        {
+            List<string> paths = [
+                Path.Join(AppDataDirectory, "Configurations"),
+                Path.Join(ProgramDirectory, "Configurations"),
+                Path.Join(Environment.CurrentDirectory, "Configurations")
+            ];
+            if (SystemInterop.CurrentPlatform == PluginPlatform.Linux)
+                paths.Insert(0, Path.Join(UnixXdgPath.DataHome, "OpenTabletDriver/Configurations"));
+            if (CommandLineConfigurationDirectory != null)
+                paths.Insert(0, CommandLineConfigurationDirectory);
+
+            return GetExistingPathOrLast([.. paths]);
+        }
+
         private string GetDefaultSettingsFile() => Path.Join(AppDataDirectory, "settings.json");
         private string GetDefaultPluginDirectory() => Path.Join(AppDataDirectory, "Plugins");
         private string GetDefaultPresetDirectory() => Path.Join(AppDataDirectory, "Presets");
@@ -66,6 +199,28 @@ namespace OpenTabletDriver.Desktop
         private string GetDefaultCacheDirectory() => Path.Join(AppDataDirectory, "Cache");
         private string GetDefaultBackupDirectory() => Path.Join(AppDataDirectory, "Backup");
         private string GetDefaultTrashDirectory() => Path.Join(AppDataDirectory, "Trash");
-        private static bool IsEnvVarUnset([DisallowNull] string envVar) => string.IsNullOrEmpty(Environment.GetEnvironmentVariable(envVar));
+        private string GetDefaultRecordingDirectory() => Path.Join(AppDataDirectory, "Recording");
+
+        private static bool IsEnvVarUnset(string envVar) =>
+            string.IsNullOrEmpty(Environment.GetEnvironmentVariable(envVar));
+
+        [return: NotNullIfNotNull("path")]
+        private static string? EnsureDirectoryExists(string? path, [CallerMemberName] string memberName = "")
+        {
+            if (path != null)
+            {
+                var appDirectory = new DirectoryInfo(path);
+
+                if (!appDirectory.Exists)
+                {
+                    appDirectory.Create();
+                    Log.Write("Settings", $"The directory '{appDirectory.FullName}' has been created ({memberName})");
+                }
+
+                return path;
+            }
+
+            return null;
+        }
     }
 }

@@ -33,18 +33,21 @@ elif (( $# )); then
     printf 'Usage: bash build-linux.sh [--check-source]\n' >&2
     exit 1
 fi
+architecture=${OTD_ARCHITECTURE:-x64}
+case "$architecture" in x64|arm64) ;; *) printf 'OTD_ARCHITECTURE must be x64 or arm64.\n' >&2; exit 1 ;; esac
 dotnet_path=${OTD_DOTNET:-dotnet}
-command -v "$dotnet_path" >/dev/null || { printf 'Install .NET SDK 8 or set OTD_DOTNET to its executable.\n' >&2; exit 1; }
+command -v "$dotnet_path" >/dev/null || { printf 'Install .NET SDK 10 or set OTD_DOTNET to its executable.\n' >&2; exit 1; }
 if ! sdks=$("$dotnet_path" --list-sdks) || [[ -z "$sdks" ]]; then
-    printf 'No .NET SDK found. The runtime alone cannot compile this source; install the .NET 8 SDK.\n' >&2
+    printf 'No .NET SDK found. The runtime alone cannot compile this source; install the .NET 10 SDK.\n' >&2
     exit 1
 fi
 command -v tar >/dev/null || { printf 'Install tar to create the portable release archive.\n' >&2; exit 1; }
 export DOTNET_CLI_HOME="$repo/.build-home"
 export NUGET_PACKAGES="$repo/.packages"
 export DOTNET_CLI_TELEMETRY_OPTOUT=1
-output=${OTD_LINUX_OUTPUT:-"$repo/artifacts/OTD-Touchpad-Linux-x64-v0.0.3"}
-archive=${OTD_LINUX_ARCHIVE:-"$repo/artifacts/OTD.v0.0.3.Linux.tar.gz"}
+version=$(sed -n 's/.*<VersionBase>\(.*\)<\/VersionBase>.*/\1/p' "$repo/upstream/Directory.Build.props")
+output=${OTD_LINUX_OUTPUT:-"$repo/artifacts/OTD-Touchpad-Linux-$architecture-v$version"}
+archive=${OTD_LINUX_ARCHIVE:-"$repo/artifacts/OTD-Touchpad-v$version-linux-$architecture.tar.gz"}
 if [[ -e "$output" ]]; then
     printf 'Build output already exists: %s\nChoose a new OTD_LINUX_OUTPUT directory to avoid carrying old settings or logs into the release.\n' "$output" >&2
     exit 1
@@ -57,7 +60,7 @@ mkdir -p "$(dirname -- "$output")"
 mkdir -p "$(dirname -- "$archive")"
 stage=$(mktemp -d "${output}.build.XXXXXX")
 for project in "${projects[@]}"; do
-    "$dotnet_path" publish "$repo/upstream/$project/$project.csproj" -c Release -r linux-x64 --self-contained true -o "$stage" -p:VersionSuffix=-touchpad-linux.3
+    "$dotnet_path" publish "$repo/upstream/$project/$project.csproj" -c Release -r "linux-$architecture" --self-contained true -o "$stage" -p:VersionSuffix=-touchpad
 done
 cp "$folder/70-otd-touchpad.rules" "$folder/linux-common.sh" "$folder/Prepare Linux.sh" "$folder/Start OTD Touchpad.sh" "$folder/README.md" "$folder/VALIDATION.md" "$stage/"
 cp "$repo/upstream/LICENSE" "$stage/LICENSE"

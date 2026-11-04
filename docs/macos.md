@@ -1,32 +1,31 @@
-> Archived usage notes for the published platform release. For the current shared source layout and build commands, see [BUILD.md](../BUILD.md).
+# Apple touchpad on macOS
 
-# Apple touchpad OTD test build
+The current source uses OpenTabletDriver v0.6.8.1 and the existing C# MultitouchSupport backend. Native Apple Silicon (`arm64`) and Intel (`x64`) builds use the same source and produce separate apps. Python is not required.
 
-This merges the Windows experimental OTD source with a direct C# MultitouchSupport backend. Python is not needed to run the app. The existing Windows project outside this MacOs folder is unchanged.
+## Build
 
-## Run on a Mac
+From the repository root, with .NET 10 and PowerShell 7:
 
-1. Extract the release ZIP on the Mac. This is an Intel x64 app; Apple Silicon requires Rosetta 2. It includes its .NET runtime.
-2. Close other OTD instances, including their driver workers.
-3. Open Terminal in the extracted folder and run `bash Prepare-Mac.command` once. This sets executable permissions and applies a local ad-hoc signature to the custom app. The build is not Apple-notarized.
-4. Open `OpenTabletDriver-Touchpad.app`. If macOS blocks it, use the app-specific Open Anyway option in Privacy & Security.
-5. Grant the app Accessibility and Input Monitoring permissions when prompted, then reopen it.
-6. Select `Apple Built-in Trackpad (Absolute)`, use Absolute Mode, set the display/tablet area, and save settings. If needed, use Detect Tablets.
+```powershell
+pwsh ./build.ps1 -Platform macos -Architecture arm64
+```
 
-Use one finger. Multiple active contacts suspend mapping; lifting releases the contact. Closing the OTD window or quitting stops its worker. The mouse filter exists only in the worker process and does not change system driver settings.
+Use `-Architecture x64` for Intel. The app and ZIP are in `artifacts/macos-arm64/` or `artifacts/macos-x64/`. The build creates and verifies a local ad-hoc signature; no Prepare-Mac.command step is needed. The app is not notarized.
 
-## Current scope and things to verify
+## Test
 
-The first built-in Apple multitouch device is selected. External Magic Trackpads and hot-plug selection are not implemented in this first build. The native ABI matches the 96-byte layout used by the working Python capture. This build has compiled on Windows and replayed the user's capture, but has not been run on a Mac; Rosetta, permissions, native callbacks, and actual pointer behavior require that test.
+1. Quit other OpenTabletDriver instances and their driver workers.
+2. Open `OpenTabletDriver-Touchpad.app`. If macOS blocks it, use the app-specific Open Anyway action in Privacy & Security.
+3. Grant the app Accessibility and Input Monitoring permissions, then reopen it. A replacement build may require permission to be granted again.
+4. Select `Apple Built-in Trackpad (Absolute)`, use Absolute Mode, set the display/tablet area, and save settings. Use Detect Tablets if needed.
+5. Test one-finger movement, lifting, a second finger, quitting, and sleep/wake. Confirm ordinary relative movement returns when the app quits.
 
-Coordinates are clamped and scaled from 0..1 to 0..65535. Y is inverted to match a top-left screen origin. If movement is vertically reversed, quit the app and launch its executable from Terminal with `OTD_TOUCHPAD_FLIP_Y=0` set. Surface dimensions use the private framework's reported dimensions divided by 100, with a logged 100 x 100 fallback. Check the aspect ratio against the physical trackpad; these private API units are not an Apple guarantee.
+The backend selects the first built-in Apple trackpad. External Magic Trackpads and hot-plug selection remain outside its current scope. Multiple contacts suspend mapping; lifting releases the contact. Hardware mouse movement can also be suppressed while touching the trackpad because the event tap cannot reliably distinguish the two devices. Buttons and scrolling are not filtered.
 
-The event filter suppresses hardware mouse movement only while a trackpad contact and recent OTD absolute output are present. It lets generated OTD events through. macOS event taps do not reliably distinguish a physical mouse from trackpad mouse events here, so a separate mouse may briefly be affected while touching the trackpad. Buttons and scrolling are not filtered. Test dragging, lifting, and quitting before judging smoothing or latency.
+Coordinates are clamped to 0..1, scaled to 0..65535, and Y is inverted. Set `OTD_TOUCHPAD_FLIP_Y=0` when launching from Terminal if necessary. Surface dimensions use the framework's reported dimensions divided by 100, with a logged 100 x 100 fallback. Verify the mapping aspect ratio on the actual device.
 
-## Source and validation
+The 96-byte native contact layout and encoder have automated checks. Those checks and a successful ARM64 build do not establish actual pointer behavior. MultitouchSupport is a private framework and can change between macOS versions. Native ARM64 application support does not itself change the trackpad's reporting rate.
 
-Source: `Experimental (v0.1.0)/upstream/OpenTabletDriver/Devices/AsusTouchpad/MacTouchpad.cs`, with detection wiring in `Driver.cs` and parent-process tracking in `OpenTabletDriver.UX/DaemonWatchdog.cs`.
+## Release
 
-The callback layout follows the approach demonstrated by https://kivy.org/doc/stable/_modules/kivy/input/providers/mactouch.html. MultitouchSupport is a private Apple framework and may change between OS versions. Existing OTD licenses remain applicable.
-
-Tests: `Experimental (v0.1.0)/tests/MacTouchpad`. The supplied capture replay yielded 574 position reports and 3 releases from 591 frames. Tests cover ABI offsets, corner mapping, Y inversion, lift, ID changes, multiple contacts, and non-finite coordinates.
+[macOS V0.0.2](https://github.com/saffroncarp1106/OTD-TouchPad-Support/releases/tag/v0.0.2Mac) provides separate Apple Silicon and Intel downloads. Basic input has been tested on Apple Silicon. The older v0.0.1Mac package remains available; its Prepare-Mac.command applies only to that older package.

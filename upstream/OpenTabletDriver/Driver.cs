@@ -13,7 +13,6 @@ using OpenTabletDriver.Plugin.Components;
 using OpenTabletDriver.Plugin.Devices;
 using OpenTabletDriver.Plugin.Tablet;
 
-#nullable enable
 namespace OpenTabletDriver
 {
     public class Driver : IDriver, IDisposable
@@ -27,12 +26,16 @@ namespace OpenTabletDriver
 
         private readonly IReportParserProvider _reportParserProvider;
         private readonly IDeviceConfigurationProvider _deviceConfigurationProvider;
-        private readonly object _detectSync = new object ();
+        private readonly object _detectSync = new object();
         private ImmutableArray<InputDeviceTree> _inputDeviceTrees = ImmutableArray<InputDeviceTree>.Empty;
+
         public event EventHandler<IEnumerable<TabletReference>>? TabletsChanged;
+
         public ICompositeDeviceHub CompositeDeviceHub { get; }
         public ImmutableArray<InputDeviceTree> InputDevices => _inputDeviceTrees;
         public IEnumerable<TabletReference> Tablets => InputDevices.Select(c => c.CreateReference());
+
+        private Dictionary<IDeviceEndpoint, Dictionary<byte, string?>> DeviceStringCache = [];
 
         public IReportParser<IDeviceReport> GetReportParser(DeviceIdentifier identifier)
         {
@@ -41,48 +44,66 @@ namespace OpenTabletDriver
 
         public IEnumerable<int> KnownVendorIDs => (
             from configuration in _deviceConfigurationProvider.TabletConfigurations
-            from identifier in configuration.DigitizerIdentifiers.Concat(configuration.AuxiliaryDeviceIdentifiers ?? Enumerable.Empty<DeviceIdentifier>())select identifier.VendorID).Distinct();
+            from identifier in configuration.DigitizerIdentifiers.Concat(configuration.AuxiliaryDeviceIdentifiers ??
+                                                                         Enumerable.Empty<DeviceIdentifier>())
+            select identifier.VendorID).Distinct();
 
         public virtual bool Detect()
         {
             lock (_detectSync)
             {
+                DeviceStringCache = []; // reset cache on redetect
+
                 bool success = false;
+
                 Log.Write("Detect", "Searching for tablets...");
+
                 var treeBuilder = ImmutableArray.CreateBuilder<InputDeviceTree>();
                 foreach (var oldTouchpad in _inputDeviceTrees.Where(t => t.Properties.Attributes?.ContainsKey("PrecisionTouchpad") == true).ToArray())
                     foreach (var input in oldTouchpad.InputDevices.ToArray())
                         input.Dispose();
-                foreach (var config in _deviceConfigurationProvider.TabletConfigurations.Where(c => !c.DigitizerIdentifiers.Any(i => i.VendorID == 65534 && i.ProductID == 1209)).Concat(Devices.AsusTouchpad.TouchpadSelection.Configurations()).Concat(Devices.AsusTouchpad.MacTouchpadSelection.Configurations()).Concat(Devices.LinuxTouchpad.LinuxTouchpadSelection.Configurations()))
+                foreach (var config in _deviceConfigurationProvider.TabletConfigurations
+                    .Where(c => !c.DigitizerIdentifiers.Any(i => i.VendorID == 65534 && i.ProductID == 1209))
+                    .Concat(Devices.AsusTouchpad.TouchpadSelection.Configurations())
+                    .Concat(Devices.AsusTouchpad.MacTouchpadSelection.Configurations())
+                    .Concat(Devices.LinuxTouchpad.LinuxTouchpadSelection.Configurations()))
                 {
-                    if (Match(config)is InputDeviceTree tree)
+                    if (Match(config) is InputDeviceTree tree)
                     {
                         success = true;
                         treeBuilder.Add(tree);
+
                         tree.Disconnected += (sender, e) =>
                         {
                             tree.OutputMode?.Dispose();
+
                             if (tree.Properties.Attributes?.ContainsKey("PrecisionTouchpad") == true)
                                 ThreadPool.QueueUserWorkItem(_ =>
                                 {
                                     foreach (var input in tree.InputDevices.ToArray())
                                         input.Dispose();
                                 });
+
+                            // save the immutable array for later use
                             Unsafe.SkipInit(out ImmutableArray<InputDeviceTree> updatedTrees);
                             ImmutableInterlocked.Update(ref _inputDeviceTrees, (trees, tree) =>
                             {
                                 updatedTrees = trees.Remove(tree);
                                 return updatedTrees;
                             }, tree);
+
+                            // use here, we do this to avoid using an _inputDeviceTrees that may have been updated
                             TabletsChanged?.Invoke(this, updatedTrees.Select(c => c.CreateReference()));
                         };
                     }
                 }
 
+                // atomically update InputDevices
                 var oldDevices = _inputDeviceTrees;
                 _inputDeviceTrees = treeBuilder.ToImmutable();
                 DisposeDevices(oldDevices);
                 TabletsChanged?.Invoke(this, Tablets);
+
                 if (!success)
                 {
                     Log.Write("Detect", "No tablets were detected.");
@@ -98,13 +119,14 @@ namespace OpenTabletDriver
             try
             {
                 var devices = new List<InputDevice>();
-                if (MatchDevice(config, config.DigitizerIdentifiers)is InputDevice digitizer)
+                if (MatchDevice(config, config.DigitizerIdentifiers) is InputDevice digitizer)
                 {
                     Log.Write("Detect", $"Found tablet '{config.Name}'");
                     devices.Add(digitizer);
+
                     if ((config.AuxiliaryDeviceIdentifiers?.Count ?? 0) > 0)
                     {
-                        if (MatchDevice(config, config.AuxiliaryDeviceIdentifiers!)is InputDevice aux)
+                        if (MatchDevice(config, config.AuxiliaryDeviceIdentifiers!) is InputDevice aux)
                             devices.Add(aux);
                         else
                             Log.Write("Detect", "Failed to find auxiliary device, express keys may be unavailable.", LogLevel.Warning);
@@ -113,19 +135,30 @@ namespace OpenTabletDriver
                     return new InputDeviceTree(config, devices);
                 }
             }
-            catch (IOException iex)when (iex.Message.Contains("Unable to open HID class device") && SystemInterop.CurrentPlatform == PluginPlatform.Linux)
+            catch (IOException iex) when (iex.Message.Contains("Unable to open HID class device")
+                && SystemInterop.CurrentPlatform == PluginPlatform.Linux)
             {
-                Log.Write("Driver", "The current user does not have the permissions to open the device stream. " + "Follow the instructions from https://opentabletdriver.net/Wiki/FAQ/Linux#fail-device-streams to resolve this issue.", LogLevel.Error);
+                Log.Write(
+                    "Driver",
+                    "The current user does not have the permissions to open the device stream. " +
+                    "Follow the instructions from https://opentabletdriver.net/Wiki/FAQ/Linux#fail-device-streams to resolve this issue.",
+                    LogLevel.Error
+                );
             }
-            catch (ArgumentOutOfRangeException aex)when (aex.Message.Contains("Value range is [0, 15]") && SystemInterop.CurrentPlatform == PluginPlatform.Linux)
+            catch (ArgumentOutOfRangeException aex) when (aex.Message.Contains("Value range is [0, 15]")
+                && SystemInterop.CurrentPlatform == PluginPlatform.Linux)
             {
-                Log.Write("Driver", "Device is currently in use by another kernel module. " + "Follow the instructions from https://opentabletdriver.net/Wiki/FAQ/Linux#argumentoutofrangeexception to resolve this issue.", LogLevel.Error);
+                Log.Write(
+                    "Driver",
+                    "Device is currently in use by another kernel module. " +
+                    "Follow the instructions from https://opentabletdriver.net/Wiki/FAQ/Linux#argumentoutofrangeexception to resolve this issue.",
+                    LogLevel.Error
+                );
             }
             catch (Exception ex)
             {
                 Log.Exception(ex);
             }
-
             return null;
         }
 
@@ -134,8 +167,10 @@ namespace OpenTabletDriver
             foreach (var identifier in identifiers)
             {
                 var matches = GetMatchingDevices(config, identifier);
+
                 if (matches.Count() > 1)
                     Log.Write("Detect", "More than 1 matching device has been found.", LogLevel.Warning);
+
                 foreach (IDeviceEndpoint dev in matches)
                 {
                     try
@@ -148,35 +183,55 @@ namespace OpenTabletDriver
                     }
                 }
             }
-
             return null;
         }
 
-        private IEnumerable<IDeviceEndpoint> GetMatchingDevices(TabletConfiguration configuration, DeviceIdentifier identifier)
+        private IDeviceEndpoint[] GetMatchingDevices(TabletConfiguration configuration, DeviceIdentifier identifier)
         {
-            return
-                from device in CompositeDeviceHub.GetDevices()
-                where identifier.VendorID == device.VendorID
-                where identifier.ProductID == device.ProductID
-                where device.CanOpen
-                where identifier.InputReportLength == null || identifier.InputReportLength == device.InputReportLength
-                where identifier.OutputReportLength == null || identifier.OutputReportLength == device.OutputReportLength
-                where identifier.FeatureReportLength == null || identifier.FeatureReportLength == device.FeatureReportLength
-                where DeviceMatchesStrings(device, identifier.DeviceStrings)
-                where DeviceMatchesAttribute(device, identifier.Attributes, configuration.Attributes)select device;
+            return [.. from device in CompositeDeviceHub.GetDevices()
+                   where identifier.VendorID == device.VendorID
+                   where identifier.ProductID == device.ProductID
+                   where device.CanOpen
+                   where identifier.InputReportLength == null || identifier.InputReportLength == device.InputReportLength
+                   where identifier.OutputReportLength == null || identifier.OutputReportLength == device.OutputReportLength
+                   where identifier.FeatureReportLength == null || identifier.FeatureReportLength == device.FeatureReportLength
+                   where DeviceMatchesStrings(device, identifier.DeviceStrings, DeviceStringCache)
+                   where DeviceMatchesAttribute(device, identifier.Attributes, configuration.Attributes)
+                   select device];
         }
 
-        private static bool DeviceMatchesStrings(IDeviceEndpoint device, Dictionary<byte, string>? deviceStrings)
+        private static bool DeviceMatchesStrings(IDeviceEndpoint device, Dictionary<byte, string>? deviceStrings, Dictionary<IDeviceEndpoint, Dictionary<byte, string?>> stringCache)
         {
             if (deviceStrings == null || deviceStrings.Count == 0)
                 return true;
+
+            // Iterate through each device string, if one doesn't match then its the wrong configuration.
             foreach (var matchQuery in deviceStrings)
             {
                 try
                 {
-                    var input = device.GetDeviceString(matchQuery.Key);
+                    string? deviceString = null;
+                    if (stringCache.TryGetValue(device, out var deviceCachedStrings) && deviceCachedStrings.TryGetValue(matchQuery.Key, out var cacheDeviceString))
+                    {
+                        if (cacheDeviceString == null)
+                        {
+                            Log.Write("Detect", $"Cached null for index {matchQuery.Key}, skipping", LogLevel.Debug);
+                            return false;
+                        }
+                        deviceString = cacheDeviceString;
+                    }
+
+                    deviceString ??= device.GetDeviceString(matchQuery.Key);
+
+                    if (!stringCache.TryAdd(device, new Dictionary<byte, string?> { { matchQuery.Key, deviceString } }))
+                        stringCache[device].TryAdd(matchQuery.Key, deviceString);
+
+                    // nullcheck after cache update to ensure nulls are cached
+                    if (deviceString == null)
+                        throw new IOException($"Unable to look up string index {matchQuery.Key}");
+
                     var pattern = matchQuery.Value;
-                    if (!Regex.IsMatch(input, pattern))
+                    if (!Regex.IsMatch(deviceString, pattern))
                         return false;
                 }
                 catch (Exception ex)
@@ -185,42 +240,45 @@ namespace OpenTabletDriver
                     return false;
                 }
             }
-
             return true;
         }
 
         private static bool DeviceMatchesAttribute(IDeviceEndpoint device, Dictionary<string, string>? identifier_attributes, Dictionary<string, string>? config_attributes)
         {
             var attributes = new Dictionary<string, string>(identifier_attributes ?? Enumerable.Empty<KeyValuePair<string, string>>());
+
             if (config_attributes != null)
             {
                 foreach (var kvp in config_attributes)
                     attributes.TryAdd(kvp.Key, kvp.Value);
             }
 
+            // Windows only configuration attribute.
             if (SystemInterop.CurrentPlatform == PluginPlatform.Windows)
             {
-                if (device is HidSharpEndpoint && attributes.TryGetValue("WinUsage", out var winUsage) && !Regex.IsMatch(device.DevicePath, $"&col{winUsage}"))
+                if (device is HidSharpEndpoint
+                    && attributes.TryGetValue("WinUsage", out var winUsage)
+                    && !Regex.IsMatch(device.DevicePath, $"&col{winUsage}"))
                 {
+                    // If it isn't a match there is no point proceeding.
                     return false;
                 }
             }
 
-            var device_attributes = device.DeviceAttributes;
-            if (device_attributes != null)
+            if (attributes.TryGetValue("HidReports", out var hidReports)
+                && device.DeviceAttributes.TryGetValue("HID_REPORTS", out var usbHidReports)
+                && !Regex.IsMatch(usbHidReports, hidReports))
             {
-                return matchInterface(attributes, device_attributes);
+                return false; // HidReports specified and no HID Reports match.
             }
 
-            return true;
-            static bool matchInterface(Dictionary<string, string> identifierAttributes, IDictionary<string, string> deviceAttributes)
-            {
-                if (!identifierAttributes.TryGetValue("Interface", out var identifierInterface))
-                    return true;
-                if (!deviceAttributes.TryGetValue("USB_INTERFACE_NUMBER", out var usbInterface))
-                    return false;
-                return identifierInterface == usbInterface;
-            }
+            if (!attributes.TryGetValue("Interface", out var identifierInterface))
+                return true; // No interface specified, match.
+
+            if (!device.DeviceAttributes.TryGetValue("USB_INTERFACE_NUMBER", out var usbInterface))
+                return false; // Device doesn't have an interface number, not a match.
+
+            return identifierInterface == usbInterface;
         }
 
         private static void DisposeDevices(ImmutableArray<InputDeviceTree> trees)
@@ -237,10 +295,11 @@ namespace OpenTabletDriver
         }
 
         private bool _isDisposed;
+
         protected virtual void Dispose(bool disposing)
         {
-            if (_isDisposed)
-                return;
+            if (_isDisposed) return;
+
             if (disposing)
             {
                 DisposeDevices(_inputDeviceTrees);

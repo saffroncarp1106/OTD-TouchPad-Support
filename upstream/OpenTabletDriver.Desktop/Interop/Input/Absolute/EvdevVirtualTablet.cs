@@ -8,13 +8,13 @@ using OpenTabletDriver.Plugin.Platform.Pointer;
 
 namespace OpenTabletDriver.Desktop.Interop.Input.Absolute
 {
-    public class EvdevVirtualTablet : IPenActionHandler, IAbsolutePointer, IPressureHandler, ITiltHandler, IEraserHandler, IHoverDistanceHandler, ISynchronousPointer, IDisposable
+    public class EvdevVirtualTablet : IPenActionHandler, IAbsolutePointer, IPressureHandler, ITiltHandler, IRotationHandler, IEraserHandler, IHoverDistanceHandler, ISynchronousPointer, IDisposable
     {
         private const int RESOLUTION = 1000; // subpixels per screen pixel
 
         private bool isEraser;
 
-        private EvdevDevice Device { set; get; }
+        private readonly EvdevDevice Device;
 
         private EventCode[] supportedEventCodes =
         [
@@ -35,9 +35,12 @@ namespace OpenTabletDriver.Desktop.Interop.Input.Absolute
 
             Device.EnableType(EventType.EV_ABS);
 
+            var virtualScreen = DesktopInterop.VirtualScreen
+                                ?? throw new InvalidOperationException("Could not get virtual screen");
+
             var xAbs = new input_absinfo
             {
-                maximum = (int)(DesktopInterop.VirtualScreen.Width * RESOLUTION),
+                maximum = (int)(virtualScreen.Width * RESOLUTION),
                 resolution = 100000
             };
             input_absinfo* xPtr = &xAbs;
@@ -45,7 +48,7 @@ namespace OpenTabletDriver.Desktop.Interop.Input.Absolute
 
             var yAbs = new input_absinfo
             {
-                maximum = (int)(DesktopInterop.VirtualScreen.Height * RESOLUTION),
+                maximum = (int)(virtualScreen.Height * RESOLUTION),
                 resolution = 100000
             };
             input_absinfo* yPtr = &yAbs;
@@ -76,6 +79,13 @@ namespace OpenTabletDriver.Desktop.Interop.Input.Absolute
             input_absinfo* yTiltPtr = &yTilt;
             Device.EnableCustomCode(EventType.EV_ABS, EventCode.ABS_TILT_Y, (IntPtr)yTiltPtr);
 
+            var rotation = new input_absinfo
+            {
+                maximum = MaxRotation
+            };
+            input_absinfo* rotationPtr = &rotation;
+            Device.EnableCustomCode(EventType.EV_ABS, EventCode.ABS_Z, (IntPtr)rotationPtr);
+
             Device.EnableTypeCodes(
                 EventType.EV_KEY,
                 supportedEventCodes
@@ -94,6 +104,7 @@ namespace OpenTabletDriver.Desktop.Interop.Input.Absolute
         }
 
         private const int MaxPressure = ushort.MaxValue;
+        private const int MaxRotation = ushort.MaxValue;
 
         private EventCode currentTool => isEraser ? EventCode.BTN_TOOL_RUBBER : EventCode.BTN_TOOL_PEN;
 
@@ -114,6 +125,11 @@ namespace OpenTabletDriver.Desktop.Interop.Input.Absolute
         {
             Device.Write(EventType.EV_ABS, EventCode.ABS_TILT_X, (int)tilt.X);
             Device.Write(EventType.EV_ABS, EventCode.ABS_TILT_Y, (int)tilt.Y);
+        }
+
+        public void SetRotation(float percentage)
+        {
+            Device.Write(EventType.EV_ABS, EventCode.ABS_Z, (int)(MaxRotation * percentage));
         }
 
         public void SetEraser(bool isEraser)
@@ -172,7 +188,7 @@ namespace OpenTabletDriver.Desktop.Interop.Input.Absolute
             if (_isDisposed) return;
 
             if (disposing)
-                Device?.Dispose();
+                Device.Dispose();
 
             _isDisposed = true;
         }

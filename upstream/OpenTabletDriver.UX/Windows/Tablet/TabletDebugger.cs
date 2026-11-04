@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using Eto.Drawing;
 using Eto.Forms;
 using OpenTabletDriver.Desktop;
+using OpenTabletDriver.Desktop.Interop;
 using OpenTabletDriver.Desktop.RPC;
 using OpenTabletDriver.Desktop.ViewModels;
 using OpenTabletDriver.Desktop.ViewModels.Utility;
@@ -18,8 +20,6 @@ using OpenTabletDriver.Plugin;
 using OpenTabletDriver.Plugin.Tablet;
 using OpenTabletDriver.Plugin.Tablet.Touch;
 using OpenTabletDriver.UX.Controls.Generic;
-
-#nullable enable
 
 namespace OpenTabletDriver.UX.Windows.Tablet
 {
@@ -70,7 +70,16 @@ namespace OpenTabletDriver.UX.Windows.Tablet
         public TabletDebugger()
             : base(Application.Instance.MainForm)
         {
-            HandleTabletsChanged(null, App.Driver.Instance.GetTablets().Result);
+            if (App.Driver.IsConnected)
+                HandleTabletsChanged(null, App.Driver.Instance.GetTablets().Result);
+
+            var recordingDir = new DirectoryInfo(AppInfo.Current.RecordingDirectory);
+
+            if (!recordingDir.Exists)
+            {
+                recordingDir.Create();
+                Log.Write("TabletDebugger", $"The recording directory '{recordingDir.FullName}' has been created");
+            }
 
             var viewmodel = new TDVM();
             DataContext = viewmodel;
@@ -81,7 +90,7 @@ namespace OpenTabletDriver.UX.Windows.Tablet
                 VerticalContentAlignment = VerticalAlignment.Stretch,
                 Spacing = 5,
                 Padding = 5,
-                MinimumSize = new Size(940, 560),
+                MinimumSize = new Size(1025, 560),
                 Items =
                 {
                     new StackLayoutItem
@@ -213,7 +222,8 @@ namespace OpenTabletDriver.UX.Windows.Tablet
                 {
                     >= 1300 => 5,
                     > 1160 => 4,
-                    <= 1160 => 3,
+                    > 1000 => 3,
+                    <= 1000 => 2,
                 };
 
                 if (oldValue == newValue) return;
@@ -224,6 +234,14 @@ namespace OpenTabletDriver.UX.Windows.Tablet
 
             App.Driver.DeviceReport += viewmodel.HandleReport;
             App.Driver.TabletsChanged += HandleTabletsChanged;
+            if (App.Driver.IsConnected)
+                App.Driver.Instance.SetTabletDebug(true);
+            App.Driver.Connected += SetTabletDebug;
+        }
+
+        private static void SetTabletDebug(object? sender, EventArgs e)
+        {
+            Debug.Assert(App.Driver.IsConnected);
             App.Driver.Instance.SetTabletDebug(true);
         }
 
@@ -259,6 +277,21 @@ namespace OpenTabletDriver.UX.Windows.Tablet
 
             dataRecordingMenuItem.BindDataContext(x => x.Checked, (TDVM vm) => vm.DataRecordingEnabled);
 
+            var openDataRecordingDirectoryMenuItem = new Command
+            {
+                MenuText = "Open recordings directory...",
+            };
+            openDataRecordingDirectoryMenuItem.Executed += (sender, e) => DesktopInterop.OpenFolder(AppInfo.Current.RecordingDirectory);
+
+            ButtonMenuItem recordingTab = new()
+            {
+                Text = "Recording",
+                Visible = true,
+                Items = {
+                    dataRecordingMenuItem,
+                    openDataRecordingDirectoryMenuItem,
+                }
+            };
 
             var visualizerEnabledMenuItem = new CheckMenuItem
             {
@@ -301,10 +334,9 @@ namespace OpenTabletDriver.UX.Windows.Tablet
             {
                 ApplicationItems =
                 {
-                    dataRecordingMenuItem,
                     visualizerEnabledMenuItem,
-                    decodingSwitchMenuItem,
                     additionalStatisticsMenuItem,
+                    decodingSwitchMenuItem,
                 },
                 QuitItem = new ButtonMenuItem((_, _) => Application.Instance.AsyncInvoke(Close))
                 {
@@ -312,6 +344,7 @@ namespace OpenTabletDriver.UX.Windows.Tablet
                 },
                 Items =
                 {
+                    recordingTab,
                     _debuggedTablets,
                     _debuggedReports,
                 },
@@ -406,7 +439,7 @@ namespace OpenTabletDriver.UX.Windows.Tablet
             // don't do anything if there isn't anything to do anyway
             if (viewmodel.AdditionalStatistics.Children.Count == 0) return;
 
-            await Task.Run(async () =>
+            await Application.Instance.InvokeAsync(async () =>
             {
                 var outerContainer = new StackLayout
                 {
@@ -496,10 +529,13 @@ namespace OpenTabletDriver.UX.Windows.Tablet
         {
             var viewmodel = DataContext as TDVM ?? throw new InvalidOperationException("Invalid data context");
 
-            await App.Driver.Instance.SetTabletDebug(false);
+            if (App.Driver.IsConnected)
+                await App.Driver.Instance.SetTabletDebug(false);
 
             App.Driver.DeviceReport -= viewmodel.HandleReport;
             App.Driver.TabletsChanged -= HandleTabletsChanged;
+            App.Driver.Connected -= SetTabletDebug;
+
             if (DataContext is IDisposable disposable)
                 disposable.Dispose();
 
@@ -592,7 +628,7 @@ namespace OpenTabletDriver.UX.Windows.Tablet
             private void DrawPosition(Graphics graphics, float scale)
             {
                 Debug.Assert(ReportData != null); // ReportData should already be checked by callers
-                object report = ReportData!.ToObject();
+                object? report = ReportData!.ToObject();
                 var specifications = ReportData.Tablet.Properties.Specifications;
                 string tabletName = ReportData.Tablet.Properties.Name;
                 var touchDigitizerSpecification = specifications.Touch;
@@ -614,7 +650,7 @@ namespace OpenTabletDriver.UX.Windows.Tablet
                     {
                         var tabletScale = CalculateTabletScale(touchDigitizerSpecification, scale);
 
-                        foreach (TouchPoint touchPoint in touchReport.Touches.Where((t) => t != null))
+                        foreach (var touchPoint in touchReport.Touches.Where(t => t != null).Cast<TouchPoint>())
                         {
                             var position = new PointF(touchPoint.Position.X, touchPoint.Position.Y) * tabletScale;
                             var drawPen = new Pen(s_AccentColor, _SPACING / 2);

@@ -22,9 +22,9 @@ namespace OpenTabletDriver.Desktop.Output
             base.OnOutput(report);
         }
 
-        private string linuxIdentity;
+        private string? linuxIdentity;
 
-        public override OpenTabletDriver.Plugin.Tablet.TabletReference Tablet
+        public override OpenTabletDriver.Plugin.Tablet.TabletReference? Tablet
         {
             get => base.Tablet;
             set
@@ -54,6 +54,6 @@ namespace OpenTabletDriver.Desktop.Output
         }
 
         [Resolved]
-        public override IAbsolutePointer Pointer { set; get; }
+        public override IAbsolutePointer? Pointer { set; get; }
     }
 }

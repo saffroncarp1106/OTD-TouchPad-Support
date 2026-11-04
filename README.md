@@ -29,49 +29,13 @@ There are quirks, it only supports 1 finger input at a time, it will just and sk
 Todo
 
 
-# Linux v0.0.3 — experimental
+# Linux V0.0.4 — experimental
 
-Source build update. Added a build script in the main folder and clearer errors for missing source files. Extract the whole ZIP and run `bash build-linux.sh` with the .NET 8 SDK installed.
+[Linux V0.0.4](https://github.com/saffroncarp1106/OTD-TouchPad-Support/releases/tag/V0.0.4Linux) includes x64 and ARM64 builds based on OpenTabletDriver v0.6.8.1. The .NET 10 runtime is included. GTK 3, libevdev, ICU, libusb, and the normal desktop udev/logind environment are required.
 
-The Linux x64 release is intended for Arch-based and Debian/Ubuntu-based distributions. It bundles .NET 8; GTK 3, libevdev, ICU, libusb, and the normal desktop udev/logind environment must be installed by the user. It has been tested with Linux Mint, CachyOS.
-To Do: Fedora handeling + Macbook linux distro
+Download the archive for your CPU, extract it, run `bash "Prepare Linux.sh"` once, then run `bash "Start OTD Touchpad.sh"` as your normal desktop user. See [linux/README.md](linux/README.md) for dependencies and setup.
 
-To run, extract the Linux x64 release, install the native libraries for your distribution, and run <code>Prepare Linux.sh</code> once. Then run <code>Start OTD Touchpad.sh</code> as your normal desktop user.
-
-Debian
-
-<code>sudo apt-get update</code>
-
-<code>sudo apt-get install libgtk-3-dev libevdev-dev libicu-dev libusb-1.0-0-dev</code>
-
-<code>tar -xzf OTD.v0.0.3.Linux.tar.gz</code>
-
-<code>cd OTD-Touchpad-Linux-x64-v0.0.3</code>
-
-<code>./Prepare\ Linux.sh</code>
-
-<code>./Start\ OTD\ Touchpad.sh</code>
-
-
-Arch
-
-<code>sudo pacman -Syu</code>
-
-<code>sudo pacman -S --needed gtk3 libevdev icu libusb</code>
-
-<code>tar -xzf OTD.v0.0.3.Linux.tar.gz</code>
-
-<code>cd OTD-Touchpad-Linux-x64-v0.0.3</code>
-
-<code>./Prepare\ Linux.sh</code>
-
-<code>./Start\ OTD\ Touchpad.sh</code>
-
-
-See [linux/README.md](linux/README.md) for dependencies, setup details, supported touchpad capabilities, build instructions, limitation, and clanker slop.
-
-<img width="960" height="792" alt="image" src="https://github.com/user-attachments/assets/176c7a45-beb3-41b0-8425-e5877147ec57" />
-
+To build the source, install the .NET 10 SDK and run `bash build-linux.sh`. Set `OTD_ARCHITECTURE=arm64` for ARM64. The new builds still need runtime testing on Linux.
 
 # Debugger
 The debugger software is now very in-depth now,
@@ -85,4 +49,3 @@ There should be a .json file created in the <code>Results</code> folder.
 Send that to a dev if you are having issues.
 
 <img width="1701" height="717" alt="image" src="https://github.com/user-attachments/assets/8f30ef33-e386-4e5f-b357-63e381977b89" />
-

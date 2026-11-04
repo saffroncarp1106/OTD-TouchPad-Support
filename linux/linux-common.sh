@@ -10,14 +10,14 @@ otd_dependency_hint() {
     case " $ID $ID_LIKE " in
         *arch*|*cachyos*)
             printf 'Arch/CachyOS runtime dependencies: sudo pacman -S --needed libevdev gtk3 icu libusb\n'
-            printf 'For building source: sudo pacman -S --needed dotnet-sdk-8.0\n'
+            printf 'For building source: sudo pacman -S --needed dotnet-sdk\n'
             ;;
         *debian*|*ubuntu*)
             printf 'Debian/Ubuntu runtime dependencies: libevdev2, libgtk-3-0, libusb-1.0-0, and your distribution ICU package.\n'
-            printf 'For building source: install the .NET 8 SDK.\n'
+            printf 'For building source: install the .NET 10 SDK.\n'
             ;;
         *)
-            printf 'Install libevdev, GTK 3, ICU and libusb; source builds require the .NET 8 SDK.\n'
+            printf 'Install libevdev, GTK 3, ICU and libusb; source builds require the .NET 10 SDK.\n'
             ;;
     esac
 }

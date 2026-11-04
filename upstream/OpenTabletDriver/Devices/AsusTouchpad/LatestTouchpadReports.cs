@@ -31,7 +31,7 @@ namespace OpenTabletDriver.Devices.AsusTouchpad
                     Monitor.Wait(sync);
                 if (disposed)
                     throw new ObjectDisposedException(nameof(LatestTouchpadReports));
-                var report = pending.First.Value;
+                var report = pending.First!.Value;
                 pending.RemoveFirst();
                 return report;
             }

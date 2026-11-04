@@ -15,35 +15,29 @@ namespace OpenTabletDriver.Desktop.Reflection
 {
     public class DesktopPluginManager : PluginManager
     {
-        public DesktopPluginManager()
-            : this(AppInfo.Current.PluginDirectory, AppInfo.Current.TrashDirectory, AppInfo.Current.TemporaryDirectory)
+        public DirectoryInfo PluginDirectory
         {
+            get { return field ??= new DirectoryInfo(AppInfo.Current.PluginDirectory); }
+            private set;
         }
 
-        protected DesktopPluginManager(string pluginDirectory, string trashDirectory, string tempDirectory)
-            : this(new DirectoryInfo(pluginDirectory), new DirectoryInfo(trashDirectory), new DirectoryInfo(tempDirectory))
+        protected DirectoryInfo TrashDirectory
         {
+            get { return field ??= new DirectoryInfo(AppInfo.Current.TrashDirectory); }
+            private set;
         }
 
-        public DesktopPluginManager(DirectoryInfo pluginDirectory, DirectoryInfo trashDirectory, DirectoryInfo tempDirectory)
+        protected DirectoryInfo TemporaryDirectory
         {
-            PluginDirectory = pluginDirectory;
-            TrashDirectory = trashDirectory;
-            TemporaryDirectory = tempDirectory;
-
-            if (!PluginDirectory.Exists)
-                PluginDirectory.Create();
+            get { return field ??= new DirectoryInfo(AppInfo.Current.TemporaryDirectory); }
+            private set;
         }
-
-        public DirectoryInfo PluginDirectory { get; }
-        protected DirectoryInfo TrashDirectory { get; }
-        protected DirectoryInfo TemporaryDirectory { get; }
 
         protected List<DesktopPluginContext> Plugins { get; } = new List<DesktopPluginContext>();
 
         public IReadOnlyCollection<DesktopPluginContext> GetLoadedPlugins() => Plugins;
 
-        public event EventHandler AssembliesChanged;
+        public event EventHandler? AssembliesChanged;
 
         public void Clean()
         {
@@ -70,6 +64,8 @@ namespace OpenTabletDriver.Desktop.Reflection
 
         public void Load()
         {
+            PluginDirectory = TrashDirectory = TemporaryDirectory = null!; // reset directories
+
             foreach (var dir in PluginDirectory.GetDirectories())
                 LoadPlugin(dir);
 
@@ -167,8 +163,15 @@ namespace OpenTabletDriver.Desktop.Reflection
                 default:
                     throw new InvalidOperationException($"Unsupported archive type: {file.Extension}");
             }
-            var context = Plugins.FirstOrDefault(ctx => ctx.Directory.FullName == pluginDir.FullName);
-            var result = pluginDir.Exists ? UpdatePlugin(context, tempDir) : InstallPlugin(pluginDir, tempDir);
+
+            bool result;
+            if (pluginDir.Exists)
+            {
+                var context = Plugins.First(ctx => ctx.Directory.FullName == pluginDir.FullName);
+                result = UpdatePlugin(context, tempDir);
+            }
+            else
+                result = InstallPlugin(pluginDir, tempDir);
 
             if (!TemporaryDirectory.GetFileSystemInfos().Any())
                 Directory.Delete(TemporaryDirectory.FullName, true);
@@ -194,8 +197,14 @@ namespace OpenTabletDriver.Desktop.Reflection
 
             sourceDir.Refresh();
 
-            var context = Plugins.FirstOrDefault(ctx => ctx.Directory.FullName == targetDir.FullName);
-            var result = targetDir.Exists ? UpdatePlugin(context, sourceDir) : InstallPlugin(targetDir, sourceDir);
+            bool result;
+            if (targetDir.Exists)
+            {
+                var context = Plugins.First(ctx => ctx.Directory.FullName == targetDir.FullName);
+                result = UpdatePlugin(context, sourceDir);
+            }
+            else
+                result = InstallPlugin(targetDir, sourceDir);
 
             await using (var fs = File.Create(metadataPath))
                 Serialization.Serialize(fs, metadata);
@@ -215,9 +224,6 @@ namespace OpenTabletDriver.Desktop.Reflection
 
         public bool UninstallPlugin(DesktopPluginContext plugin)
         {
-            if (plugin == null)
-                return false;
-
             var random = new Random();
             if (!Directory.Exists(TrashDirectory.FullName))
                 TrashDirectory.Create();

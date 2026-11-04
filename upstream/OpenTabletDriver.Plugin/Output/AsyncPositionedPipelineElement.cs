@@ -12,24 +12,26 @@ namespace OpenTabletDriver.Plugin.Output
     {
         private readonly object synchronizationObject = new object();
         private HPETDeltaStopwatch consumeWatch = new HPETDeltaStopwatch(false);
-        private ITimer scheduler;
+        private ITimer? scheduler;
         private float? reportMsAvg;
         private float frequency;
 
         /// <summary>
         /// The current state of the <see cref="AsyncPositionedPipelineElement{T}"/>.
         /// </summary>
-        protected T State { set; get; }
+        protected T? State { set; get; }
 
-        public event Action<T> Emit;
+        public event Action<T>? Emit;
 
         public abstract PipelinePosition Position { get; }
 
         [Resolved]
-        public ITimer Scheduler
+        public ITimer? Scheduler
         {
             set
             {
+                if (this.scheduler != null) throw new NotSupportedException("Changing a timer after it has already been set is not supported yet");
+
                 this.scheduler = value;
 
                 if (this.scheduler != null)
@@ -52,20 +54,29 @@ namespace OpenTabletDriver.Plugin.Output
         {
             set
             {
-                this.frequency = value;
-                if (Scheduler.Enabled)
-                    Scheduler.Stop();
-                Scheduler.Interval = 1000f / value;
-                Scheduler.Start();
+                if (value < 101)
+                    Log.Write("Timer", "Low frequency detected, Output may appear choppy. please use 1000hz, 500hz, 250hz or 125hz instead.", LogLevel.Warning);
+
+                this.frequency = MathF.Max(1, value);
+                if (Scheduler != null)
+                {
+                    if (Scheduler is { Enabled: true })
+                        Scheduler.Stop();
+                    Scheduler.Interval = 1000f / this.frequency;
+                    Scheduler.Start();
+                }
             }
             get => this.frequency;
         }
 
-        public void Consume(T value)
+        public void Consume(T? value)
         {
-            // Block DeviceReport and ITouchReport from being consumed for now
-            if (value is DeviceReport or ITouchReport)
+            if (!FilterState(value))
+            {
+                if (value != null)
+                    Emit?.Invoke(value);
                 return;
+            }
 
             lock (synchronizationObject)
             {
@@ -95,6 +106,26 @@ namespace OpenTabletDriver.Plugin.Output
         /// Call <see cref="PenIsInRange"/> to check if the pen is in range and avoid false emit.
         /// </remarks>
         protected abstract void UpdateState();
+
+        /// <summary>
+        /// Allows the implementer to filter out reports they do not want in state updates.
+        /// Some reports such as <see cref="DeviceReport"/> or <see cref="ITouchReport"/> may consume a large amount of state changes and clog up <see cref="UpdateState"/>. These can be desirable to filter out.
+        /// Filtered reports are not removed from the pipeline, they skip over to the next element. Similar to <see cref="OnEmit"/> but without requiring a state update.
+        /// </summary>
+        /// <remarks>
+        /// By default, <see cref="DeviceReport"/> and <see cref="ITouchReport"/> are filtered out. Override <see cref="FilterState"/> if you need these reports.
+        /// </remarks>
+        protected virtual bool FilterState(T? value)
+        {
+            // Block DeviceReport and ITouchReport from being consumed by default
+            // Avoids timer polls being consumed by tablets that spam idle reports or touch reports without any way of disabling them
+            if (value is DeviceReport or ITouchReport)
+            {
+                return false;
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// Determines if pen is in tablet hover range.
@@ -134,7 +165,7 @@ namespace OpenTabletDriver.Plugin.Output
             if (disposing)
             {
                 Scheduler?.Dispose();
-                Scheduler = null;
+                scheduler = null; // set backing field directly to dodge the fake-readonly setter
             }
 
             _isDisposed = true;

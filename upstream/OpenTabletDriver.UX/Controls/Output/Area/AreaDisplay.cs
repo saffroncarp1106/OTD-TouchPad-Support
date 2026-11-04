@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Numerics;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Eto.Drawing;
 using Eto.Forms;
 using OpenTabletDriver.Desktop.Profiles;
 using OpenTabletDriver.Interop;
 using OpenTabletDriver.Plugin;
-using OpenTabletDriver.UX.Controls.Generic;
 
 namespace OpenTabletDriver.UX.Controls.Output.Area
 {
@@ -29,20 +30,25 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             }
         }
 
-        private AreaSettings area;
+        public AreaDisplay()
+        {
+            RotationBinding.Bind(AreaBinding.Child(x => x.Rotation));
+        }
+
+        private AreaSettings? area;
         private bool lockToUsableArea;
-        private string unit, invalidForegroundError, invalidBackgroundError;
-        protected IEnumerable<RectangleF> areaBounds;
-        private RectangleF fullAreaBounds;
+        private string? unit, invalidForegroundError;
+        protected IEnumerable<RectangleF>? areaBounds;
+        private RectangleF? fullAreaBounds;
         private readonly TextDrawer textDrawer = new();
 
-        public event EventHandler<EventArgs> AreaChanged;
-        public event EventHandler<EventArgs> LockToUsableAreaChanged;
-        public event EventHandler<EventArgs> UnitChanged;
-        public event EventHandler<EventArgs> AreaBoundsChanged;
-        public event EventHandler<EventArgs> FullAreaBoundsChanged;
-        public event EventHandler<EventArgs> InvalidForegroundErrorChanged;
-        public event EventHandler<EventArgs> InvalidBackgroundErrorChanged;
+        public event EventHandler<EventArgs>? AreaChanged;
+        public event EventHandler<EventArgs>? LockToUsableAreaChanged;
+        public event EventHandler<EventArgs>? UnitChanged;
+        public event EventHandler<EventArgs>? AreaBoundsChanged;
+        public event EventHandler<EventArgs>? FullAreaBoundsChanged;
+        public event EventHandler<EventArgs>? InvalidForegroundErrorChanged;
+        public event EventHandler<EventArgs>? RotationChanged;
 
         protected virtual void OnAreaChanged() => AreaChanged?.Invoke(this, EventArgs.Empty);
         protected virtual void OnLockToUsableAreaChanged() => LockToUsableAreaChanged?.Invoke(this, EventArgs.Empty);
@@ -50,9 +56,9 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
         protected virtual void OnAreaBoundsChanged() => AreaBoundsChanged?.Invoke(this, EventArgs.Empty);
         protected virtual void OnFullAreaBoundsChanged() => FullAreaBoundsChanged?.Invoke(this, EventArgs.Empty);
         protected virtual void OnInvalidForegroundErrorChanged() => InvalidForegroundErrorChanged?.Invoke(this, EventArgs.Empty);
-        protected virtual void OnInvalidBackgroundErrorChanged() => InvalidBackgroundErrorChanged?.Invoke(this, EventArgs.Empty);
+        protected virtual void OnRotationChanged() => RotationChanged?.Invoke(this, EventArgs.Empty);
 
-        public AreaSettings Area
+        public AreaSettings? Area
         {
             set
             {
@@ -72,7 +78,7 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             get => this.lockToUsableArea;
         }
 
-        public string Unit
+        public string? Unit
         {
             set
             {
@@ -82,7 +88,7 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             get => this.unit;
         }
 
-        public virtual IEnumerable<RectangleF> AreaBounds
+        public virtual IEnumerable<RectangleF>? AreaBounds
         {
             set
             {
@@ -92,7 +98,7 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             get => this.areaBounds;
         }
 
-        public RectangleF FullAreaBounds
+        public RectangleF? FullAreaBounds
         {
             protected set
             {
@@ -102,7 +108,7 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             get => this.fullAreaBounds;
         }
 
-        public string InvalidForegroundError
+        public string? InvalidForegroundError
         {
             set
             {
@@ -112,21 +118,36 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             get => this.invalidForegroundError;
         }
 
-        public string InvalidBackgroundError
+        public float Rotation
         {
+            get;
             set
             {
-                this.invalidBackgroundError = value;
-                this.OnInvalidBackgroundErrorChanged();
+                field = value;
+                OnRotationChanged();
             }
-            get => this.invalidBackgroundError;
         }
 
-        public BindableBinding<AreaDisplay, AreaSettings> AreaBinding
+        public BindableBinding<AreaDisplay, float> RotationBinding
         {
             get
             {
-                return new BindableBinding<AreaDisplay, AreaSettings>(
+                return new BindableBinding<AreaDisplay, float>(
+                    this,
+                    c => c.Rotation,
+                    (c, v) => c.Rotation = v,
+                    (c, h) => c.RotationChanged += h,
+                    (c, h) => c.RotationChanged -= h
+                );
+            }
+        }
+
+
+        public BindableBinding<AreaDisplay, AreaSettings?> AreaBinding
+        {
+            get
+            {
+                return new BindableBinding<AreaDisplay, AreaSettings?>(
                     this,
                     c => c.Area,
                     (c, v) => c.Area = v,
@@ -150,11 +171,11 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             }
         }
 
-        public BindableBinding<AreaDisplay, string> UnitBinding
+        public BindableBinding<AreaDisplay, string?> UnitBinding
         {
             get
             {
-                return new BindableBinding<AreaDisplay, string>(
+                return new BindableBinding<AreaDisplay, string?>(
                     this,
                     c => c.Unit,
                     (c, v) => c.Unit = v,
@@ -164,11 +185,11 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             }
         }
 
-        public BindableBinding<AreaDisplay, IEnumerable<RectangleF>> AreaBoundsBinding
+        public BindableBinding<AreaDisplay, IEnumerable<RectangleF>?> AreaBoundsBinding
         {
             get
             {
-                return new BindableBinding<AreaDisplay, IEnumerable<RectangleF>>(
+                return new BindableBinding<AreaDisplay, IEnumerable<RectangleF>?>(
                     this,
                     c => c.AreaBounds,
                     (c, v) => c.AreaBounds = v,
@@ -178,11 +199,11 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             }
         }
 
-        public BindableBinding<AreaDisplay, RectangleF> FullAreaBoundsBinding
+        public BindableBinding<AreaDisplay, RectangleF?> FullAreaBoundsBinding
         {
             get
             {
-                return new BindableBinding<AreaDisplay, RectangleF>(
+                return new BindableBinding<AreaDisplay, RectangleF?>(
                     this,
                     c => c.FullAreaBounds,
                     (c, v) => c.FullAreaBounds = v,
@@ -192,30 +213,16 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             }
         }
 
-        public BindableBinding<AreaDisplay, string> InvalidForegroundErrorBinding
+        public BindableBinding<AreaDisplay, string?> InvalidForegroundErrorBinding
         {
             get
             {
-                return new BindableBinding<AreaDisplay, string>(
+                return new BindableBinding<AreaDisplay, string?>(
                     this,
                     c => c.InvalidForegroundError,
                     (c, v) => c.InvalidForegroundError = v,
                     (c, h) => c.InvalidForegroundErrorChanged += h,
                     (c, h) => c.InvalidForegroundErrorChanged -= h
-                );
-            }
-        }
-
-        public BindableBinding<AreaDisplay, string> InvalidBackgroundErrorBinding
-        {
-            get
-            {
-                return new BindableBinding<AreaDisplay, string>(
-                    this,
-                    c => c.InvalidBackgroundError,
-                    (c, v) => c.InvalidBackgroundError = v,
-                    (c, h) => c.InvalidBackgroundErrorChanged += h,
-                    (c, h) => c.InvalidBackgroundErrorChanged -= h
                 );
             }
         }
@@ -240,7 +247,7 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             new SizeF(Area.Width, Area.Height)
         );
 
-        public float PixelScale => CalculateScale(FullAreaBounds);
+        public float PixelScale => CalculateScale(FullAreaBounds ?? throw new InvalidOperationException($"Unable to look up pixel scale when {nameof(FullAreaBounds)} is unset"));
 
         protected override void OnMouseDown(MouseEventArgs e)
         {
@@ -275,11 +282,14 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
         {
             base.OnMouseMove(e);
 
-            if (mouseDragging)
+            if (mouseDragging && Area != null)
             {
-                if (mouseOffset != null)
+                if (mouseOffset != null && viewModelOffset.HasValue)
                 {
                     var delta = e.Location - mouseOffset.Value;
+
+                    delta.Rotate(Rotation);
+
                     var newX = viewModelOffset.Value.X + (delta.X / PixelScale);
                     var newY = viewModelOffset.Value.Y + (delta.Y / PixelScale);
 
@@ -310,11 +320,16 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
                 {
                     using (graphics.SaveTransformState())
                     {
-                        var scale = CalculateScale(FullAreaBounds);
+                        var fullAreaBoundsVal = FullAreaBounds!.Value;
+                        float scale = CalculateScale(fullAreaBoundsVal);
 
                         var clientCenter = new PointF(this.ClientSize.Width, this.ClientSize.Height) / 2;
-                        var backgroundCenter = new PointF(FullAreaBounds.Width, FullAreaBounds.Height) / 2 * scale;
+                        var backgroundCenter = new PointF(fullAreaBoundsVal.Width, fullAreaBoundsVal.Height) / 2 * scale;
                         var offset = clientCenter - backgroundCenter;
+
+                        graphics.TranslateTransform(clientCenter);
+                        graphics.RotateTransform(-Rotation);
+                        graphics.TranslateTransform(-clientCenter);
 
                         graphics.TranslateTransform(offset);
 
@@ -323,14 +338,10 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
                     }
                     break;
                 }
-                case (_, false):
-                {
-                    DrawText(graphics, InvalidBackgroundError);
-                    break;
-                }
                 case (false, _):
                 {
-                    DrawText(graphics, InvalidForegroundError);
+                    if (InvalidForegroundError != null)
+                        DrawText(graphics, InvalidForegroundError);
                     break;
                 }
             }
@@ -338,13 +349,22 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
 
         private void DrawBackground(Graphics graphics, float scale)
         {
+            Debug.Assert(FullAreaBounds.HasValue);
+            Debug.Assert(AreaBounds != null);
+
             using (graphics.SaveTransformState())
             {
-                graphics.TranslateTransform(-FullAreaBounds.TopLeft * scale);
+                graphics.TranslateTransform(-FullAreaBounds.Value.TopLeft * scale);
                 foreach (var rect in AreaBounds)
                 {
                     var scaledRect = rect * scale;
+                    var markerRect = new RectangleF(scaledRect.TopLeft, scaledRect.TopLeft + 4 * (scale < 1 ? 1 : scale));
                     graphics.FillRectangle(AreaBoundsFillColor, scaledRect);
+
+                    graphics.FillRectangle(SystemColors.HighlightText, markerRect);
+                    graphics.DrawRectangle(SystemColors.DisabledText, markerRect);
+
+                    // draw border last
                     graphics.DrawRectangle(AreaBoundsBorderColor, scaledRect);
                 }
             }
@@ -352,30 +372,39 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
 
         private void DrawForeground(Graphics graphics, float scale)
         {
+            if (Area == null) return;
+
             using (graphics.SaveTransformState())
             {
                 var area = ForegroundRect * scale;
 
                 graphics.TranslateTransform(area.Center);
-                graphics.RotateTransform(Area.Rotation);
+                graphics.RotateTransform(Rotation);
                 graphics.TranslateTransform(-area.Center);
 
                 graphics.FillRectangle(AccentColor, area);
-                graphics.DrawRectangle(SystemColors.ControlText, area);
 
                 var originEllipse = new RectangleF(0, 0, 1, 1);
                 originEllipse.Offset(area.Center - (originEllipse.Size / 2));
                 graphics.DrawEllipse(SystemColors.ControlText, originEllipse);
 
-                DrawRatioText(graphics, area);
-                DrawWidthText(graphics, area);
-                DrawHeightText(graphics, area);
+                // draw rotation marker helper in top left
+                var markerRect = new RectangleF(area.TopLeft + 1, area.TopLeft + 4 * (scale < 1 ? 1 : scale));
+                graphics.FillRectangle(SystemColors.WindowBackground, markerRect);
+
+                // draw gadgets
+                DrawRatioText(graphics, area, Area);
+                DrawWidthText(graphics, area, Area);
+                DrawHeightText(graphics, area, Area);
+
+                // draw outline rectangle last to ensure crisp outline
+                graphics.DrawRectangle(SystemColors.ControlText, area);
             }
         }
 
-        private void DrawRatioText(Graphics graphics, RectangleF area)
+        private void DrawRatioText(Graphics graphics, RectangleF area, AreaSettings areaSettings)
         {
-            string ratio = Math.Round(Area.Width / Area.Height, 4).ToString();
+            string ratio = Math.Round(areaSettings.Width / areaSettings.Height, 4).ToString();
             SizeF ratioMeasure = graphics.MeasureString(Font, ratio);
             var offsetY = area.Center.Y + (ratioMeasure.Height / 2);
             if (offsetY + ratioMeasure.Height > area.Y + area.Height)
@@ -388,10 +417,10 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             textDrawer.DrawText(graphics, Font, TextBrush, ratioPos, ratio);
         }
 
-        private void DrawWidthText(Graphics graphics, RectangleF area)
+        private void DrawWidthText(Graphics graphics, RectangleF area, AreaSettings areaSettings)
         {
             var minDist = area.Center.Y - 40;
-            string widthText = $"{MathF.Round(Area.Width, 3)}{Unit}";
+            string widthText = $"{MathF.Round(areaSettings.Width, 3)}{Unit}";
             var widthTextSize = graphics.MeasureString(Font, widthText);
             var widthTextPos = new PointF(
                 area.MiddleTop.X - (widthTextSize.Width / 2),
@@ -400,12 +429,12 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
             textDrawer.DrawText(graphics, Font, TextBrush, widthTextPos, widthText);
         }
 
-        private void DrawHeightText(Graphics graphics, RectangleF area)
+        private void DrawHeightText(Graphics graphics, RectangleF area, AreaSettings areaSettings)
         {
             using (graphics.SaveTransformState())
             {
                 var minDist = area.Center.X - 40;
-                string heightText = $"{MathF.Round(Area.Height, 3)}{Unit}";
+                string heightText = $"{MathF.Round(areaSettings.Height, 3)}{Unit}";
                 var heightSize = graphics.MeasureString(Font, heightText) / 2;
                 var heightPos = new PointF(
                     -area.MiddleLeft.Y - heightSize.Width,
@@ -428,14 +457,20 @@ namespace OpenTabletDriver.UX.Controls.Output.Area
 
         private float CalculateScale(RectangleF rect)
         {
+            if ((Area?.Rotation ?? 0) != 0)
+            {
+                var corners = rect.GetAreaCorners(Area?.Rotation ?? 0);
+                var topLeft = new PointF(corners.ToArray().MinBy(x => x.X).X, corners.ToArray().MinBy(x => x.Y).Y);
+                var bottomRight = new PointF(corners.ToArray().MaxBy(x => x.X).X, corners.ToArray().MaxBy(x => x.Y).Y);
+                rect = new RectangleF(topLeft, bottomRight);
+            }
+
             float scaleX = (this.ClientSize.Width - 2) / rect.Width;
             float scaleY = (this.ClientSize.Height - 2) / rect.Height;
+
             return scaleX > scaleY ? scaleY : scaleX;
         }
 
-        private static bool IsValid(RectangleF rect)
-        {
-            return rect.Width > 0 && rect.Height > 0;
-        }
+        private static bool IsValid([NotNullWhen(true)] RectangleF? rect) => rect is { Width: > 0, Height: > 0 };
     }
 }

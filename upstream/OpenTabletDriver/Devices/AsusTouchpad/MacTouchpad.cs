@@ -13,14 +13,14 @@ namespace OpenTabletDriver.Devices.AsusTouchpad;
 [DeviceHub, SupportedPlatform(PluginPlatform.MacOS)]
 public sealed class MacTouchpadHub : IDeviceHub
 {
-    public event EventHandler<DevicesChangedEventArgs> DevicesChanged { add { } remove { } }
+    public event EventHandler<DevicesChangedEventArgs>? DevicesChanged { add { } remove { } }
     public IEnumerable<IDeviceEndpoint> GetDevices() => MacTouchpadSelection.Devices;
 }
 
 public static class MacTouchpadSelection
 {
     static readonly object Sync = new();
-    static MacTouchpadEndpoint[] devices;
+    static MacTouchpadEndpoint[]? devices;
     internal static MacTouchpadEndpoint[] Devices
     {
         get
@@ -102,6 +102,8 @@ internal sealed class MacTouchpadEndpoint : IDeviceEndpoint
     public IDictionary<string, string> DeviceAttributes => new Dictionary<string, string> { ["Transport"] = "MultitouchSupport" };
     public string GetDeviceString(byte index) => index == 1 ? Manufacturer : ProductName;
     public IDeviceEndpointStream Open() => new MacTouchpadStream(Device);
+    public void OpenAndSendFeatureInit(byte[] initData) => throw new NotSupportedException();
+    public void OpenAndSendOutputInit(byte[] initData) => throw new NotSupportedException();
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -158,7 +160,7 @@ internal sealed class MacTouchpadStream : IDeviceEndpointStream
     readonly bool flipY = Environment.GetEnvironmentVariable("OTD_TOUCHPAD_FLIP_Y") != "0";
     volatile bool stopping;
     int disposed;
-    Exception startupError;
+    Exception? startupError;
     IntPtr tap;
     long lastContact;
     public MacTouchpadStream(IntPtr device)

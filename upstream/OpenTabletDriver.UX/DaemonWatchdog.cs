@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using OpenTabletDriver.Desktop.Interop;
 using OpenTabletDriver.Interop;
 using OpenTabletDriver.Plugin;
 
@@ -9,8 +8,10 @@ namespace OpenTabletDriver.UX
 {
     public sealed class DaemonWatchdog : IDisposable
     {
-        public event EventHandler DaemonExited;
-        private Process daemonProcess;
+        public event EventHandler? DaemonExited;
+
+        private Process? daemonProcess;
+
         private readonly static ProcessStartInfo startInfo = SystemInterop.CurrentPlatform switch
         {
             PluginPlatform.Windows => new ProcessStartInfo
