@@ -26,7 +26,15 @@ There are quirks, it only supports 1 finger input at a time, it will just and sk
 
 
 # MacOS
-Todo
+Download macOS V0.0.2:
+- arm64 for Apple Silicon (M1 and newer)
+- x64 for Intel Macs
+
+1) Extract the ZIP and open OpenTabletDriver-Touchpad.app.
+2) If macOS blocks it, go to System Settings > Privacy & Security and click Open Anyway.
+3) Allow Accessibility and Input Monitoring permissions, then close and reopen the app.
+4) Select Apple Built-in Trackpad (Absolute), choose Absolute Mode, set your display and tablet area, then save.
+<img width="997" height="785" alt="image" src="https://github.com/user-attachments/assets/d335784a-81f6-4d88-89d4-4066b242bcbf" />
 
 
 # Linux v0.0.4 — experimental
